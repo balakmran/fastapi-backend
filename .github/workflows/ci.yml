@@ -17,7 +17,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          POSTGRES_DB: postgres
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -27,7 +27,7 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/test_db
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
       ENV: dev
 
     steps:
