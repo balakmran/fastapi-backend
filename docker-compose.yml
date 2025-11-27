@@ -1,0 +1,41 @@
+services:
+  api:
+    image: fastapi-backend:${VERSION:-latest}
+    build: .
+    command: fastapi dev app/main.py --host 0.0.0.0 --port 8000
+    volumes:
+      - ./app:/app/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/app_db
+      - ENV=dev
+    depends_on:
+      - db
+
+  db:
+    image: postgres:18
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  docs:
+    image: fastapi-backend-docs:${VERSION:-latest}
+    build:
+      context: .
+      target: builder
+    command: /bin/sh -c "uv sync --group docs && uv run mkdocs serve -a 0.0.0.0:8001"
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./docs:/app/docs
+      - ./mkdocs.yml:/app/mkdocs.yml
+      - ./app:/app/app
+
+volumes:
+  postgres_data:
