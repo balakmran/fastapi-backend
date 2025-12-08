@@ -3,6 +3,10 @@
 
 set dotenv-load
 
+# List all recipes
+default:
+    just --list
+
 # Install all dependencies
 install:
     uv sync --all-groups
@@ -93,3 +97,7 @@ migrate-gen message:
 # Apply migrations
 migrate-up:
     uv run alembic upgrade head
+
+# Bump version
+bump part="patch":
+    @uv run python scripts/bump_version.py {{part}}

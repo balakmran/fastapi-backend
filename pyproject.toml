@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastapi-backend"
-version = "0.1.0"
+version = "0.2.0"
 description = "FastAPI Backend"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -20,6 +20,7 @@ dependencies = [
     "alembic>=1.17.2",
     "greenlet>=3.1.1",
     "asyncpg>=0.31.0",
+    "jinja2>=3.1.6",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -49,6 +50,17 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "PL", "RUF", "D"]
 ignore = ["D100", "D104"] # Ignore missing docstring in public module/package
 pydocstyle.convention = "google"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Security",
+    "fastapi.Header",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

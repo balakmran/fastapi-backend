@@ -63,6 +63,7 @@ We use `just` to manage project commands. Run `just --list` to see all available
 | `just clean`             | Remove build artifacts and cache directories           |
 | `just migrate-gen "msg"` | Generate a new Alembic migration with a message        |
 | `just migrate-up`        | Apply all pending migrations                           |
+| `just bump part="patch"` | Bump version (part: `patch`, `minor`, `major`)         |
 | `just docs-serve`        | Serve the documentation locally                        |
 
 ## 📁 Project Structure

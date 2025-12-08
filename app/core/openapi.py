@@ -1,9 +1,11 @@
+import inspect
 from enum import StrEnum
 from typing import Any, NotRequired, TypedDict
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
+from app import __version__
 from app.core.config import settings
 
 
@@ -48,17 +50,32 @@ class OpenAPIParameters(TypedDict):
     redoc_url: str | None
     openapi_tags: list[dict[str, Any]]
     servers: list[dict[str, Any]] | None
+    swagger_ui_parameters: dict[str, Any]
 
 
 OPENAPI_PARAMETERS: OpenAPIParameters = {
     "title": settings.PROJECT_NAME,
-    "summary": "FastAPI backend",
-    "version": "0.1.0",
-    "description": "A robust foundation for building high-performance RESTful APIs.",
+    "summary": "A robust, high-performance API foundation.",
+    "version": __version__,
+    "description": inspect.cleandoc(
+        """
+        A robust backend API built with **FastAPI** and modern Python tooling.
+        This project serves as a scalable foundation for building
+        high-performance web applications.
+
+        ### Key Features
+
+        *   **High Performance**: Built on FastAPI.
+        *   **Modern Stack**: Python 3.12+, SQLModel, Pydantic.
+        *   **Production Ready**: Structured logging, Docker.
+        *   **Developer Experience**: uv, ruff, ty, just.
+        """
+    ),
     "docs_url": "/docs" if settings.ENV == "dev" else None,
     "redoc_url": "/redoc" if settings.ENV == "dev" else None,
     "openapi_tags": APITag.metadata(),  # type: ignore
     "servers": None,
+    "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},
 }
 
 

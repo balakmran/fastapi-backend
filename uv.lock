@@ -339,13 +339,14 @@ standard = [
 
 [[package]]
 name = "fastapi-backend"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi", extra = ["standard"] },
     { name = "greenlet" },
+    { name = "jinja2" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
     { name = "sqlmodel" },
@@ -374,6 +375,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.121.3" },
     { name = "greenlet", specifier = ">=3.1.1" },
+    { name = "jinja2", specifier = ">=3.1.6" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.13" },
     { name = "pydantic-settings", specifier = ">=2.12.0" },
     { name = "sqlmodel", specifier = ">=0.0.27" },

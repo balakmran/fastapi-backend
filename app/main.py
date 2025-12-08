@@ -1,8 +1,9 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-import structlog
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from structlog import get_logger
 
 from app.api import api_router
 from app.core.exception_handlers import add_exception_handlers
@@ -12,7 +13,7 @@ from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
 from app.db.session import close_db, init_db
 
 setup_logging()
-logger = structlog.get_logger()
+logger = get_logger()
 
 
 def create_app() -> FastAPI:
@@ -32,17 +33,10 @@ def create_app() -> FastAPI:
     add_exception_handlers(app)
     configure_middlewares(app)
 
+    # Mount static files
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
     app.include_router(api_router)
-
-    @app.get("/")
-    async def root() -> dict[str, str]:
-        """Root endpoint to verify the application is running."""
-        return {"message": "Welcome to FastAPI Backend"}
-
-    @app.get("/health", include_in_schema=False)
-    async def health() -> dict[str, str]:
-        """Health check endpoint."""
-        return {"status": "ok"}
 
     return app
 

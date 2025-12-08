@@ -1,33 +1,22 @@
+from unittest.mock import patch
+
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
 
 
-@pytest.mark.asyncio
-async def test_root():
-    """Test the root endpoint."""
-    app = create_app()
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        response = await ac.get("/")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"message": "Welcome to FastAPI Backend"}
-
-
-@pytest.mark.asyncio
-async def test_health():
-    """Test the health endpoint."""
-    app = create_app()
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        response = await ac.get("/health")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"status": "ok"}
+@pytest.fixture(autouse=True)
+def mock_db_lifecycle():
+    """Mock database lifecycle events to avoid connection attempts."""
+    with (
+        patch("tests.conftest.init_db"),
+        patch("tests.conftest.close_db"),
+        patch("app.main.init_db"),
+        patch("app.main.close_db"),
+    ):
+        yield
 
 
 def test_lifespan():
