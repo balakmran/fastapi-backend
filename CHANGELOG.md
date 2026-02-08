@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Favicon**: Official FastAPI logo served as the favicon.
 - **AI Context**: Added `GEMINI.md` for AI agent instructions and project context.
 - **Versioning**: Implemented dynamic versioning and automated bump workflow (`just bump`).
+- **Release Automation**: Added `just tag` to automate git tagging and pushing.
 - **Documentation**: Updated `CONTRIBUTING.md` and `GEMINI.md` with versioning workflow instructions.
 
 ### Changed

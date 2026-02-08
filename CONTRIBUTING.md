@@ -64,6 +64,7 @@ We use `just` to manage project commands. Run `just --list` to see all available
 | `just migrate-gen "msg"` | Generate a new Alembic migration with a message        |
 | `just migrate-up`        | Apply all pending migrations                           |
 | `just bump part="patch"` | Bump version (part: `patch`, `minor`, `major`)         |
+| `just tag`               | Create and push git tag for current version            |
 | `just docs-serve`        | Serve the documentation locally                        |
 
 ## 📁 Project Structure

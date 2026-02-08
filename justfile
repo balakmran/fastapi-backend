@@ -101,3 +101,7 @@ migrate-up:
 # Bump version
 bump part="patch":
     @uv run python scripts/bump_version.py {{part}}
+
+# Create and push git tag for current version
+tag:
+    @uv run python scripts/tag_release.py

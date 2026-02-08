@@ -126,4 +126,5 @@ When creating a new module (e.g., `app/modules/product/`), follow this structure
   | `just bump part="minor"` | Minor     | `0.3.0`                  |
   | `just bump part="major"` | Major     | `1.0.0`                  |
 
+- **Tagging:** After bumping the version and merging to main, run `just tag` to create and push the git tag (e.g., `v0.2.0`). This triggers the GitHub Release.
 - **Changelog:** Always update `CHANGELOG.md` with a new version header and release date before bumping the version.
