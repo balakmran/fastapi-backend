@@ -17,7 +17,9 @@ def test_configure_cors_enabled() -> None:
     app = FastAPI()
 
     # Patch settings to enable CORS
-    with patch.object(settings, "BACKEND_CORS_ORIGINS", ["http://localhost:3000"]):
+    with patch.object(
+        settings, "BACKEND_CORS_ORIGINS", ["http://localhost:3000"]
+    ):
         configure_cors(app)
 
         # Verify CORSMiddleware is added
@@ -44,7 +46,9 @@ def test_configure_trusted_hosts() -> None:
     configure_trusted_hosts(app)
 
     # Verify TrustedHostMiddleware is added
-    has_trusted_host = any(m.cls == TrustedHostMiddleware for m in app.user_middleware)
+    has_trusted_host = any(
+        m.cls == TrustedHostMiddleware for m in app.user_middleware
+    )
     assert has_trusted_host
 
 
@@ -52,7 +56,9 @@ def test_configure_middlewares() -> None:
     """Test that configure_middlewares configures all middlewares."""
     app = FastAPI()
 
-    with patch.object(settings, "BACKEND_CORS_ORIGINS", ["http://localhost:3000"]):
+    with patch.object(
+        settings, "BACKEND_CORS_ORIGINS", ["http://localhost:3000"]
+    ):
         configure_middlewares(app)
 
         # Verify both middlewares are added

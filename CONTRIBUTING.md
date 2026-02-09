@@ -1,6 +1,8 @@
 # Contributing Guide
 
-Thank you for your interest in contributing to the FastAPI Backend project! This guide will help you set up your development environment and understand the project structure.
+Thank you for your interest in contributing to the FastAPI Backend project! This
+guide will help you set up your development environment and understand the
+project structure.
 
 ## 🛠️ Prerequisites
 
@@ -10,14 +12,15 @@ Ensure you have the following tools installed:
 - [Python 3.12+](https://www.python.org/downloads/)
 - [uv](https://github.com/astral-sh/uv) - Python package manager
 - [just](https://github.com/casey/just) - Command runner
-- [OrbStack](https://orbstack.dev/) (recommended) or [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [OrbStack](https://orbstack.dev/) (recommended) or
+  [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 ## ⚡️ Development Setup
 
 1.  **Clone the repository:**
 
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/balakmran/fastapi-backend.git
     cd fastapi-backend
     ```
 
@@ -45,12 +48,50 @@ Ensure you have the following tools installed:
     just run
     ```
 
-    The API will be available at [http://127.0.0.1:8000](http://127.0.0.1:8000).
-    Interactive API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+    The application homepage at [http://127.0.0.1:8000](http://127.0.0.1:8000)
+    provides a project status dashboard and quick links to documentation.
+    Interactive API docs:
+    [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+## 🤝 Contribution Workflow
+
+### Fixing Bugs
+
+1.  **Check Issues**: Look for existing issues to avoid duplicates.
+2.  **Create Issue**: If not found, create a new issue describing the bug with
+    reproduction steps.
+3.  **Create Branch**: `git checkout -b fix/issue-number-short-description`
+4.  **Reproduce**: Write a test case in `tests/` that reproduces the bug (it
+    should fail).
+5.  **Fix**: Implement the fix until the test passes.
+6.  **Verify**: Run `just check` to ensure no regressions.
+7.  **Submit PR**: Open a Pull Request referencing the issue.
+
+### Adding Features
+
+1.  **Propose**: Open a discussion or issue to propose the feature.
+2.  **Create Branch**: `git checkout -b feat/short-description`
+3.  **Document**: Update `docs/` if the feature involves user-facing changes.
+4.  **Implement**: Write tests and code. Follow TDD where possible.
+5.  **Verify**: Run `just check`.
+6.  **Submit PR**: Open a Pull Request.
+
+### 💎 Coding Standards
+
+We enforce strict coding standards to maintain a high-quality codebase.
+
+- **AI Agents**: Please refer to [AGENTS.md](AGENTS.md) for detailed
+  architectural and stylistic rules.
+- **Style**: We use [Ruff](https://github.com/astral-sh/ruff) for formatting and
+  linting.
+- **Types**: 100% type coverage is required.
+- **Commits**: Follow
+  [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## 📜 Development Commands
 
-We use `just` to manage project commands. Run `just --list` to see all available commands.
+We use `just` to manage project commands. Run `just --list` to see all available
+commands.
 
 | Command                  | Description                                            |
 | :----------------------- | :----------------------------------------------------- |
@@ -61,11 +102,14 @@ We use `just` to manage project commands. Run `just --list` to see all available
 | `just down`              | Stop and remove all Docker containers                  |
 | `just check`             | Run all quality checks (format, lint, typecheck, test) |
 | `just clean`             | Remove build artifacts and cache directories           |
+| `just pi`                | Install pre-commit hooks (`prek install`)              |
+| `just pr`                | Run pre-commit hooks on all files (`prek run`)         |
+| `just docb`              | Build documentation (`docs-build`)                     |
+| `just ds`                | Serve documentation locally (`docs-serve`)             |
 | `just migrate-gen "msg"` | Generate a new Alembic migration with a message        |
 | `just migrate-up`        | Apply all pending migrations                           |
-| `just bump part="patch"` | Bump version (part: `patch`, `minor`, `major`)         |
+| `just bump part`         | Bump version (part: `patch`, `minor`, `major`)         |
 | `just tag`               | Create and push git tag for current version            |
-| `just docs-serve`        | Serve the documentation locally                        |
 
 ## 📁 Project Structure
 

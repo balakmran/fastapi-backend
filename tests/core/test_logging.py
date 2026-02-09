@@ -36,7 +36,9 @@ def test_setup_logging_prod() -> None:
         # Verify JSONRenderer is in processors
         call_args = mock_configure.call_args
         processors = call_args.kwargs["processors"]
-        assert any(isinstance(p, structlog.processors.JSONRenderer) for p in processors)
+        assert any(
+            isinstance(p, structlog.processors.JSONRenderer) for p in processors
+        )
 
 
 def test_setup_logging_not_dev() -> None:

@@ -1,11 +1,21 @@
-
-# Justfile for FastAPI Backend
+# Justfile - FastAPI Backend
 
 set dotenv-load
 
 # List all recipes
 default:
     just --list
+
+# Aliases
+alias pi := prek-install
+alias pr := prek-run
+alias docb := docs-build
+alias ds := docs-serve
+alias release := tag
+
+# =============================================================================
+# Development
+# =============================================================================
 
 # Install all dependencies
 install:
@@ -22,23 +32,51 @@ clean:
     @find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
     @find . -type d -name "site" -exec rm -rf {} + 2>/dev/null || true
     @find . -type f -name ".coverage" -delete 2>/dev/null || true
-    @echo "✨ Clean complete!"
+    @echo "Clean complete!"
 
-# Start Docker containers (all services)
-up:
-    VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml) docker compose up -d --build
+# Run local development server
+run:
+    uv run fastapi dev app/main.py
+
+# Install pre-commit hooks
+prek-install:
+    uv run prek install
+
+# Run pre-commit hooks on all files
+prek-run:
+    uv run prek run --all-files
+
+# =============================================================================
+# Database
+# =============================================================================
 
 # Start only the database container
 db:
     docker compose up -d db
 
+# Generate a new migration
+migrate-gen message:
+    uv run alembic revision --autogenerate -m "{{message}}"
+
+# Apply migrations
+migrate-up:
+    uv run alembic upgrade head
+
+# =============================================================================
+# Docker
+# =============================================================================
+
+# Start Docker containers (all services)
+up:
+    VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml) docker compose up -d --build
+
 # Stop Docker containers
 down:
     docker compose down
 
-# Run local development server
-run:
-    uv run fastapi dev app/main.py
+# =============================================================================
+# Quality
+# =============================================================================
 
 # Run linting
 lint:
@@ -54,49 +92,58 @@ typecheck:
 
 # Run tests with coverage
 test:
-	@uv run pytest -q --cov=app --cov-report=html --cov-report=term:skip-covered --tb=line tests/
+    @uv run pytest -q --cov=app --cov-report=html --cov-report=term:skip-covered --tb=line tests/
 
 # Run all quality checks
 check:
     @echo ""
-    @echo "🔧 Running formatter..."
-    @echo "═════════════════════════════"
+    @echo "Running formatter..."
+    @echo "-----------------------------"
     @just format
     @echo ""
-    @echo "✨ Running linter..."
-    @echo "═════════════════════════════"
+    @echo "Running linter..."
+    @echo "-----------------------------"
     @just lint
     @echo ""
-    @echo "🔍 Running type checker..."
-    @echo "═════════════════════════════"
+    @echo "Running type checker..."
+    @echo "-----------------------------"
     @just typecheck
     @echo ""
-    @echo "🧪 Running tests..."
-    @echo "═════════════════════════════"
+    @echo "Running tests..."
+    @echo "-----------------------------"
     @just test
     @echo ""
-    @echo "✅ All checks passed!"
+    @echo "All checks passed!"
     @echo ""
 
-# Install pre-commit hooks
-pre-commit-install:
-    uv run pre-commit install
+# =============================================================================
+# Documentation
+# =============================================================================
 
 # Build documentation
 docs-build:
-    uv run mkdocs build
+    rm -f docs/changelog.md docs/license.md docs/contributing.md
+    rm -rf docs/about
+    cp CHANGELOG.md docs/changelog.md
+    cp LICENSE docs/license.md
+    cp CONTRIBUTING.md docs/contributing.md
+    cp README.md docs/index.md
+    uv run python -m zensical build
 
 # Serve documentation locally
 docs-serve:
-    uv run mkdocs serve -a localhost:8001
+    rm -f docs/changelog.md docs/license.md docs/contributing.md docs/agents.md
+    rm -rf docs/about
+    cp CHANGELOG.md docs/changelog.md
+    cp LICENSE docs/license.md
+    cp CONTRIBUTING.md docs/contributing.md
+    cp GEMINI.md docs/agents.md
+    cp README.md docs/index.md
+    uv run python -m zensical serve --dev-addr localhost:8001
 
-# Generate a new migration
-migrate-gen message:
-    uv run alembic revision --autogenerate -m "{{message}}"
-
-# Apply migrations
-migrate-up:
-    uv run alembic upgrade head
+# =============================================================================
+# Release
+# =============================================================================
 
 # Bump version
 bump part="patch":

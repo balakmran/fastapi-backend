@@ -23,7 +23,8 @@ class OpenAPITag(TypedDict):
 class APITag(StrEnum):
     """Tags used by our documentation to better organize the endpoints.
 
-    New route tags should be defined here and imported in `module_name/routes.py`.
+    New route tags should be defined here and imported in
+    `module_name/routes.py`.
     """
 
     users = "users"
@@ -55,20 +56,13 @@ class OpenAPIParameters(TypedDict):
 
 OPENAPI_PARAMETERS: OpenAPIParameters = {
     "title": settings.PROJECT_NAME,
-    "summary": "A robust, high-performance API foundation.",
+    "summary": "High-Performance, Scalable API Foundation.",
     "version": __version__,
     "description": inspect.cleandoc(
         """
-        A robust backend API built with **FastAPI** and modern Python tooling.
-        This project serves as a scalable foundation for building
-        high-performance web applications.
-
-        ### Key Features
-
-        *   **High Performance**: Built on FastAPI.
-        *   **Modern Stack**: Python 3.12+, SQLModel, Pydantic.
-        *   **Production Ready**: Structured logging, Docker.
-        *   **Developer Experience**: uv, ruff, ty, just.
+        Built with **FastAPI**, **SQLModel**, and **PostgreSQL**.
+        Features a production-ready stack with strict type checking,
+        structured logging, and OpenTelemetry observability.
         """
     ),
     "docs_url": "/docs" if settings.ENV == "dev" else None,

@@ -20,7 +20,8 @@ def setup_logging() -> None:
 
     if settings.ENV == "prod":
         processors = [
-            structlog.stdlib.add_logger_name,  # Only for prod (needs stdlib logger)
+            # Only for prod (needs stdlib logger)
+            structlog.stdlib.add_logger_name,
             *shared_processors,
             structlog.processors.dict_tracebacks,
             structlog.processors.JSONRenderer(),
@@ -42,7 +43,7 @@ def setup_logging() -> None:
         cache_logger_on_first_use=True,
     )
 
-    # Configure standard library logging for third-party libraries (uvicorn, etc)
+    # Configure standard library logging for third-party libraries
     if settings.ENV != "dev":
         # Only needed in production when we use LoggerFactory
         formatter = structlog.stdlib.ProcessorFormatter(

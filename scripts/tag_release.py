@@ -22,7 +22,9 @@ def tag_release():
 
     # Check if tag already exists
     try:
-        existing_tags = subprocess.check_output(["git", "tag"], text=True).splitlines()
+        existing_tags = subprocess.check_output(
+            ["git", "tag"], text=True
+        ).splitlines()
         if tag_name in existing_tags:
             print(f"Tag {tag_name} already exists.")
             sys.exit(0)

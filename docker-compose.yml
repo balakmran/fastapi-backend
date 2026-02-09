@@ -29,12 +29,12 @@ services:
     build:
       context: .
       target: builder
-    command: /bin/sh -c "uv sync --group docs && uv run mkdocs serve -a 0.0.0.0:8001"
+    command: /bin/sh -c "uv sync --group docs && uv run python -m zensical serve -a 0.0.0.0:8001"
     ports:
       - "8001:8001"
     volumes:
       - ./docs:/app/docs
-      - ./mkdocs.yml:/app/mkdocs.yml
+      - ./zensical.toml:/app/zensical.toml
       - ./app:/app/app
 
 volumes:

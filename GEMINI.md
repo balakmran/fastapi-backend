@@ -1,8 +1,10 @@
-# FastAPI Backend - Project Context
+# AI Agent Instructions
 
 ## Project Overview
 
-This is a robust backend API built with **FastAPI**, **SQLModel**, and **PostgreSQL**. It is designed as a scalable foundation for high-performance web applications, featuring a modern Python stack (Python 3.12+) and developer-focused tooling (`uv`, `just`, `ruff`).
+**High-Performance, Scalable API Foundation** built with **FastAPI**,
+**SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
+type checking, structured logging, and OpenTelemetry observability.
 
 ## 🛠 Tech Stack & Tools
 
@@ -15,6 +17,7 @@ This is a robust backend API built with **FastAPI**, **SQLModel**, and **Postgre
 - **Linting/Formatting:** Ruff
 - **Type Checking:** ty (Static type checker)
 - **Testing:** Pytest, pytest-cov
+- **Observability:** OpenTelemetry, Structlog
 
 ## 🚀 Key Commands (via `just`)
 
@@ -28,23 +31,28 @@ The project uses `just` to automate common tasks.
 | `just db`                  | Start only the PostgreSQL database container.               |
 | `just down`                | Stop and remove all Docker containers.                      |
 | `just check`               | Run **all** quality checks (format, lint, typecheck, test). |
-| `just test`                | Run tests with coverage reporting.                          |
+| `just clean`               | Remove build artifacts and cache.                           |
+| `just pi`                  | Install pre-commit hooks (`prek install`).                  |
+| `just pr`                  | Run pre-commit hooks on all files (`prek run`).             |
+| `just docb`                | Build documentation (`docs-build`).                         |
+| `just ds`                  | Serve documentation locally (`docs-serve`).                 |
 | `just migrate-gen "<msg>"` | Generate a new Alembic migration.                           |
 | `just migrate-up`          | Apply pending database migrations.                          |
-| `just clean`               | Remove build artifacts and cache.                           |
 
 ## 📂 Architecture
 
 The project follows a modular structure within the `app/` directory:
 
-- **`app/main.py`**: Application entry point. Configures lifecycle, middleware, and exception handlers.
+- **`app/main.py`**: Application entry point. Configures lifecycle, middleware,
+  and exception handlers.
 - **`app/core/`**: Core infrastructure.
   - `config.py`: Application settings using `pydantic-settings` (reads `.env`).
   - `logging.py`: Structured logging setup (structlog).
   - `exceptions.py`, `exception_handlers.py`: Global error handling.
 - **`app/db/`**: Database configuration (`session.py`, `base.py`).
 - **`app/modules/`**: Feature modules (Domain-Driven Design).
-  - Example: `app/modules/user/` contains `models.py`, `schemas.py`, `routes.py`, `service.py`, `repository.py`.
+  - Example: `app/modules/user/` contains `models.py`, `schemas.py`,
+    `routes.py`, `service.py`, `repository.py`.
 - **`tests/`**: Test suite mirroring the app structure.
 - **`alembic/`**: Database migration scripts.
 
@@ -54,17 +62,24 @@ The project follows a modular structure within the `app/` directory:
 
 - **Formatting & Linting:** Strictly enforced by **Ruff**.
 - **Type Safety:** 100% type hint coverage expected. Checked by `ty`.
-- **Docstrings:** Google-style docstrings are used (configured in `pyproject.toml`).
+- **Docstrings:** Google-style docstrings are used (configured in
+  `pyproject.toml`).
+- **Line Length:** Maximum 80 characters for both Code (Python) and
+  Documentation (Markdown).
 
 ### Coding Standards
 
-- **Python:** Adhere to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
-- **General:** For other languages or aspects, refer to the [Google Style Guides](https://google.github.io/styleguide/) for consistent coding standards across the project.
+- **Python:** Adhere to the
+  [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
+- **General:** For other languages or aspects, refer to the
+  [Google Style Guides](https://google.github.io/styleguide/) for consistent
+  coding standards across the project.
 
 ### Database Changes
 
 - **Never modify the database schema manually.**
-- Always define models in code (SQLModel) and run `just migrate-gen "message"` to generate a migration script.
+- Always define models in code (SQLModel) and run `just migrate-gen "message"`
+  to generate a migration script.
 - Apply changes with `just migrate-up`.
 
 ### Configuration
@@ -82,16 +97,19 @@ The project follows a modular structure within the `app/` directory:
 ## 🔑 Key Files
 
 - `justfile`: Definition of all executable task commands.
-- `pyproject.toml`: Project configuration, dependencies, and tool settings (Ruff, Pytest).
+- `pyproject.toml`: Project configuration, dependencies, and tool settings
+  (Ruff, Pytest).
 - `docker-compose.yml`: Definition of local dev services (Postgres).
 - `app/main.py`: The FastAPI application factory.
 
 ### 🧩 Feature Module Template
 
-When creating a new module (e.g., `app/modules/product/`), follow this structure:
+When creating a new module (e.g., `app/modules/product/`), follow this
+structure:
 
 - `models.py`: SQLModel database tables.
-- `schemas.py`: Pydantic models for Request/Response (keep separate from DB models).
+- `schemas.py`: Pydantic models for Request/Response (keep separate from DB
+  models).
 - `repository.py`: CRUD operations (database interaction only).
 - `service.py`: Business logic (calls repository).
 - `routes.py`: FastAPI router endpoints (calls service).
@@ -99,10 +117,14 @@ When creating a new module (e.g., `app/modules/product/`), follow this structure
 
 ### 🧪 Testing Guidelines
 
-- **Fixtures:** Use `conftest.py` for shared resources (db session, async client).
-- **Integration over Unit:** Prioritize integration tests for routes (`tests/modules/user/test_routes.py`).
-- **Mocking:** Mock external APIs, but use a real (test) database for repository tests.
-- **Naming:** Test functions must start with `test_` and be descriptive (e.g., `test_create_user_duplicate_email_fails`).
+- **Fixtures:** Use `conftest.py` for shared resources (db session, async
+  client).
+- **Integration over Unit:** Prioritize integration tests for routes
+  (`tests/modules/user/test_routes.py`).
+- **Mocking:** Mock external APIs, but use a real (test) database for repository
+  tests.
+- **Naming:** Test functions must start with `test_` and be descriptive (e.g.,
+  `test_create_user_duplicate_email_fails`).
 
 ### 📦 Git & Commits
 
@@ -113,12 +135,15 @@ When creating a new module (e.g., `app/modules/product/`), follow this structure
 ### ⚠️ Error Handling
 
 - Use the custom `AppException` (or specific subclasses) for logic errors.
-- **Do not** raise generic HTTPExceptions (`HTTPException(status_code=400)`) in services; raise domain exceptions instead, and let the router or exception handler map them to HTTP status codes.
+- **Do not** raise generic HTTPExceptions (`HTTPException(status_code=400)`) in
+  services; raise domain exceptions instead, and let the router or exception
+  handler map them to HTTP status codes.
 
 ### 🚀 Release Process
 
 - **Versioning:** Use Semantic Versioning (Major.Minor.Patch).
-- **Automation:** Use `just bump part="<part>"` to increment the version. This updates `pyproject.toml` and `app/__init__.py`.
+- **Automation:** Use `just bump part="<part>"` to increment the version. This
+  updates `pyproject.toml` and `app/__init__.py`.
 
   | Run Command              | Bump Type | Result (Original: 0.2.0) |
   | :----------------------- | :-------- | :----------------------- |
@@ -126,5 +151,8 @@ When creating a new module (e.g., `app/modules/product/`), follow this structure
   | `just bump part="minor"` | Minor     | `0.3.0`                  |
   | `just bump part="major"` | Major     | `1.0.0`                  |
 
-- **Tagging:** After bumping the version and merging to main, run `just tag` to create and push the git tag (e.g., `v0.2.0`). This triggers the GitHub Release.
-- **Changelog:** Always update `CHANGELOG.md` with a new version header and release date before bumping the version.
+- **Tagging:** After bumping the version and merging to main, run `just tag` to
+  create and push the git tag (e.g., `v0.2.0`). This triggers the GitHub
+  Release.
+- **Changelog:** Always update `CHANGELOG.md` with a new version header and
+  release date before bumping the version.

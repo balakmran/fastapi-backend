@@ -64,7 +64,9 @@ async def test_ready_failure():
     # Mock the session dependency to raise exception
     async def mock_get_session():
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(side_effect=Exception("DB Connection Error"))
+        mock_session.exec = AsyncMock(
+            side_effect=Exception("DB Connection Error")
+        )
         yield mock_session
 
     app.dependency_overrides[get_session] = mock_get_session

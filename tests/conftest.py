@@ -37,8 +37,8 @@ async def initialize_db() -> AsyncGenerator[None, None]:
 async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession, None]:
     """Fixture that returns a SQLAlchemy session with a SAVEPOINT.
 
-    The rollback happens after the test completes. This guarantees that the database is
-    cleaned up after each test.
+    The rollback happens after the test completes. This guarantees that the
+    database is cleaned up after each test.
     """
     if not app.db.session.engine:
         raise RuntimeError("Database engine is not initialized")

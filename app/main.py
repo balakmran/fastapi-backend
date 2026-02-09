@@ -10,6 +10,7 @@ from app.core.exception_handlers import add_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middlewares import configure_middlewares
 from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
+from app.core.telemetry import setup_opentelemetry
 from app.db.session import close_db, init_db
 
 setup_logging()
@@ -32,6 +33,9 @@ def create_app() -> FastAPI:
     set_openapi_generator(app)
     add_exception_handlers(app)
     configure_middlewares(app)
+
+    # Setup Observability
+    setup_opentelemetry(app)
 
     # Mount static files
     app.mount("/static", StaticFiles(directory="app/static"), name="static")

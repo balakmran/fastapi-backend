@@ -50,6 +50,10 @@ header {
     font-size: 1.5rem;
     color: var(--text-primary);
     letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #58a6ff 0%, #a5f3fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 nav {
@@ -75,40 +79,41 @@ main {
     justify-content: center;
     align-items: center;
     text-align: center;
-    padding: 4rem 0;
+    padding: 2rem 0;
 }
 
 .hero h1 {
-    font-size: 4rem;
+    font-size: 3rem;
     font-weight: 600;
     background: linear-gradient(135deg, #fff 0%, #8b949e 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     letter-spacing: -2px;
 }
 
 .subtitle {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     color: var(--text-secondary);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     font-weight: 300;
 }
 
-/* Code Snippet Styles */
 .code-snippet {
     background: #0d1117;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     display: flex;
+    width: fit-content;
+    margin: 0 auto 1.5rem auto;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    gap: 0.75rem;
     font-family: monospace;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    max-width: 100%;
 }
 
 .code-snippet code {
@@ -139,36 +144,21 @@ main {
 .status-card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    padding: 0.5rem 1.5rem;
+    padding: 0.4rem 1.2rem;
     border-radius: 50px;
-    display: inline-flex;
+    display: flex;
+    width: fit-content;
+    margin: 0 auto 2rem auto;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 3rem;
+    gap: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.status-indicator.online {
-    background-color: #238636;
-    box-shadow: 0 0 10px #238636;
-}
-
-.status-text {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
 }
 
 .actions {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
 }
 
 .btn {
@@ -202,23 +192,24 @@ main {
     background-color: rgba(255,255,255,0.02);
 }
 
-/* Features Grid */
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
     width: 100%;
-    margin-top: 2rem;
+    margin-top: 1rem;
 }
 
 .feature-card {
     background: rgba(22, 27, 34, 0.6);
     backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
-    padding: 1.5rem;
-    border-radius: 12px;
+    padding: 1rem;
+    border-radius: 10px;
     text-align: left;
     transition: transform 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
 }
 
 .feature-card:hover {
@@ -226,32 +217,46 @@ main {
     border-color: var(--accent-color);
 }
 
+.feature-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
 .feature-icon {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    margin-bottom: 0;
 }
 
 .feature-card h3 {
     color: var(--text-primary);
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    font-size: 1rem;
     font-weight: 600;
+    margin-bottom: 0;
 }
 
 .feature-card p {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 
 footer {
     padding: 2rem 0;
-    text-align: center;
     border-top: 1px solid var(--border-color);
     margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-footer p {
+footer p, footer a {
     color: var(--text-secondary);
     font-size: 0.8rem;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: var(--accent-color);
 }

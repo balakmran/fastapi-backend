@@ -5,31 +5,88 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A robust backend API built with **FastAPI** and modern Python tooling. This project serves as a scalable foundation for building high-performance web applications.
+**High-Performance, Scalable API Foundation** built with **FastAPI**,
+**SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
+type checking, structured logging, and OpenTelemetry observability.
 
 ## 🚀 Key Features
 
-- **High Performance**: Built on [FastAPI](https://fastapi.tiangolo.com/), one of the fastest Python frameworks available.
-- **Modern Stack**: Utilizes Python 3.12+, SQLModel, and Pydantic for type-safe, intuitive development.
-- **Production Ready**: Includes structured logging, Docker containerization, and comprehensive configuration management.
-- **Developer Experience**: Optimized workflow with `uv` for fast package management and `just` for command automation.
+- **High Performance**: Async I/O with FastAPI and Pydantic.
+- **Type Safe**: 100% type-annotated, verified by `ty`.
+- **Observable**: integrated OpenTelemetry traces and structured logging.
+- **Developer First**: Powered by `uv` for package management and `just` for
+  automation.
 
-## 🛠️ Technology Stack
+## 🛠️ Tech Stack
 
-- **Framework**: FastAPI
-- **Database**: PostgreSQL with SQLModel (SQLAlchemy)
-- **Migrations**: Alembic
-- **Logging**: Structlog
-- **Containerization**: Docker (OrbStack recommended)
-- **Tooling**: uv, Ruff, ty, Pytest, pytest-cov
+- **Core**: FastAPI, SQLModel, Pydantic Settings
+- **Database**: PostgreSQL, AsyncPG, Alembic
+- **Tooling**: uv, Ruff, Ty, Pytest
+- **Observability**: OpenTelemetry, Structlog
 
-## 🤝 Contributing
+## ⚡️ Quick Start
 
-We welcome contributions! If you're looking to set up the project locally for development, please check out our **[Contributing Guide](CONTRIBUTING.md)**.
+```bash
+# 1. Install dependencies
+just install
 
-It covers:
-- 🛠️ Prerequisites & Installation
-- ⚡️ Quick Start Guide
-- 📜 Available Development Commands
-- 📁 Project Structure Overview
-- 🧪 Running Tests & Quality Checks
+# 2. Start database (Docker)
+just db
+
+# 3. Run migrations
+just migrate-up
+
+# 4. Start server
+just run
+```
+
+Visit the API documentation at
+[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+## 📂 Project Structure
+
+```plaintext
+├── app/
+│   ├── core/
+│   │   ├── config.py             # Pydantic settings
+│   │   ├── exceptions.py         # Custom exceptions
+│   │   ├── exception_handlers.py # Global exception handlers
+│   │   ├── logging.py            # Structlog configuration
+│   │   ├── middlewares.py        # Middleware configuration
+│   │   ├── openapi.py            # OpenAPI metadata & config
+│   │   └── telemetry.py          # OpenTelemetry instrumentation
+│   ├── db/                       # Database connection & base models
+│   ├── modules/
+│   │   └── user/                 # Example domain module
+│   │       ├── models.py         # SQLModel database tables
+│   │       ├── schemas.py        # Pydantic request/response models
+│   │       ├── repository.py     # Database access (CRUD)
+│   │       ├── service.py        # Business logic
+│   │       └── routes.py         # FastAPI router endpoints
+│   ├── static/                   # Static assets (css, img)
+│   ├── templates/                # Jinja2 templates
+│   └── main.py                   # App entry point
+├── tests/                        # Pytest suite
+├── alembic/                      # Database migrations
+├── docs/                         # Documentation
+├── .env                          # Environment variables
+├── docker-compose.yml            # Local dev environment
+├── Dockerfile                    # Production Docker image
+├── GEMINI.md                     # AI Agent context
+├── justfile                      # Command runner
+├── pyproject.toml                # Dependencies & config
+└── zensical.toml                 # Documentation config
+```
+
+## 📚 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+## 📜 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this
+project.
+
+## License
+
+This project is licensed under the terms of the [MIT license](LICENSE).

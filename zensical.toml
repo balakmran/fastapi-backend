@@ -1,0 +1,57 @@
+site_name = "FastAPI Backend"
+repo_url = "https://github.com/balakmran/fastapi-backend"
+repo_name = "balakmran/fastapi-backend"
+copyright = "Copyright &copy; 2025 - 2026 Balakumaran Manoharan. MIT License."
+
+[theme]
+name = "material"
+
+[[theme.palette]]
+media = "(prefers-color-scheme)"
+toggle = { icon = "material/brightness-auto", name = "Switch to light mode" }
+
+[[theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+toggle = { icon = "material/brightness-7", name = "Switch to dark mode" }
+
+[[theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+toggle = { icon = "material/brightness-4", name = "Switch to system preference" }
+
+[theme.features]
+list = [
+    "navigation.sections",
+    "content.code.copy",
+]
+
+[extra]
+css = ["stylesheets/extra.css"]
+
+[markdown]
+extensions = [
+    { "pymdownx.highlight" = { anchor_linenums = true } },
+    "pymdownx.superfences",
+    "pymdownx.inlinehilite",
+    "pymdownx.snippets",
+    "admonition",
+    "pymdownx.details",
+]
+
+[plugins]
+list = [
+    "search",
+    { "mkdocstrings" = { handlers = { python = { paths = ["."], options = { docstring_style = "google" } } } } },
+]
+
+nav = [
+    { "Home" = "index.md" },
+    { "Changelog" = "changelog.md" },
+    { "Contributing Guide" = "contributing.md" },
+    { "License" = "license.md" }
+]

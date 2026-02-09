@@ -27,7 +27,9 @@ async def test_db_lifecycle_and_error_handling():
     assert app.db.session.engine is None
 
     # 3. Verify get_session raises RuntimeError when engine is None
-    with pytest.raises(RuntimeError, match="Database engine is not initialized"):
+    with pytest.raises(
+        RuntimeError, match="Database engine is not initialized"
+    ):
         async for _ in get_session():
             pass
 

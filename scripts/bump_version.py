@@ -41,7 +41,10 @@ def bump_version(part: str):
 
     # Update pyproject.toml
     new_content = re.sub(
-        r'version = "\d+\.\d+\.\d+"', f'version = "{new_version}"', content, count=1
+        r'version = "\d+\.\d+\.\d+"',
+        f'version = "{new_version}"',
+        content,
+        count=1,
     )
     pyproject_path.write_text(new_content)
 

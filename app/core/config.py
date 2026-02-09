@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     ENV: str = "dev"
     PROJECT_NAME: str = "FastAPI Backend"
+    OTEL_ENABLED: bool = True
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
@@ -19,11 +20,11 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "app_db"
 
-    @computed_field  # type: ignore[misc]
+    @computed_field
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         """Assemble the database URL."""
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore[return-value]
             scheme="postgresql+asyncpg",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
@@ -33,7 +34,10 @@ class Settings(BaseSettings):
         )
 
     ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "test"]
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]
 
 
-settings = Settings()  # type: ignore
+settings = Settings()

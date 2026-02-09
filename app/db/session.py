@@ -35,6 +35,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     if not engine:
         raise RuntimeError("Database engine is not initialized")
 
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore
+    async_session = sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )  # type: ignore
     async with async_session() as session:
         yield session

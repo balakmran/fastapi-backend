@@ -25,7 +25,9 @@ def test_internal_server_error_init() -> None:
     assert err.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert err.headers is None
 
-    err_custom = InternalServerError(message="Custom Error", headers={"X-Custom": "1"})
+    err_custom = InternalServerError(
+        message="Custom Error", headers={"X-Custom": "1"}
+    )
     assert err_custom.message == "Custom Error"
     assert err_custom.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert err_custom.headers == {"X-Custom": "1"}

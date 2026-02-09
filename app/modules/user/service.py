@@ -37,7 +37,9 @@ class UserService:
         """List users."""
         return await self.repository.list(skip, limit)
 
-    async def update_user(self, user_id: uuid.UUID, user_update: UserUpdate) -> User:
+    async def update_user(
+        self, user_id: uuid.UUID, user_update: UserUpdate
+    ) -> User:
         """Update a user."""
         user = await self.get_user(user_id)
         return await self.repository.update(user, user_update)

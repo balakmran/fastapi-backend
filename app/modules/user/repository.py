@@ -28,7 +28,7 @@ class UserRepository:
 
     async def get_by_email(self, email: str) -> User | None:
         """Get a user by email."""
-        statement = select(User).where(User.email == email)
+        statement = select(User).where(User.email == email)  # type: ignore
         result = await self.session.exec(statement)  # type: ignore
         return result.scalars().first()
 

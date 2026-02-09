@@ -30,7 +30,7 @@ async def health() -> dict[str, str]:
 async def ready(session: AsyncSession = Depends(get_session)) -> dict[str, str]:
     """Readiness probe endpoint."""
     try:
-        await session.exec(text("SELECT 1"))
+        await session.exec(text("SELECT 1"))  # type: ignore
         return {"status": "ready"}
     except Exception as e:
         raise HTTPException(
