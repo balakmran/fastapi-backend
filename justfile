@@ -122,23 +122,10 @@ check:
 
 # Build documentation
 docs-build:
-    rm -f docs/changelog.md docs/license.md docs/contributing.md
-    rm -rf docs/about
-    cp CHANGELOG.md docs/changelog.md
-    cp LICENSE docs/license.md
-    cp CONTRIBUTING.md docs/contributing.md
-    cp README.md docs/index.md
-    uv run python -m zensical build
+    uv run python -m zensical build --clean
 
 # Serve documentation locally
 docs-serve:
-    rm -f docs/changelog.md docs/license.md docs/contributing.md docs/agents.md
-    rm -rf docs/about
-    cp CHANGELOG.md docs/changelog.md
-    cp LICENSE docs/license.md
-    cp CONTRIBUTING.md docs/contributing.md
-    cp GEMINI.md docs/agents.md
-    cp README.md docs/index.md
     uv run python -m zensical serve --dev-addr localhost:8001
 
 # =============================================================================

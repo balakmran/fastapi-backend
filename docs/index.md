@@ -1,3 +1,7 @@
+---
+title: Home
+---
+
 # FastAPI Backend
 
 [![CI](https://github.com/balakmran/fastapi-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/fastapi-backend/actions/workflows/ci.yml)
@@ -80,13 +84,13 @@ Visit the API documentation at
 
 ## 📚 Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+See [Changelog](https://github.com/balakmran/fastapi-backend/blob/main/CHANGELOG.md) for version history.
 
 ## 📜 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this
+See [Contributing](https://github.com/balakmran/fastapi-backend/blob/main/CONTRIBUTING.md) for details on how to contribute to this
 project.
 
 ## License
 
-This project is licensed under the terms of the [MIT license](LICENSE).
+This project is licensed under the terms of the [MIT license](https://github.com/balakmran/fastapi-backend/blob/main/LICENSE).

@@ -44,10 +44,6 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 site/
-docs/changelog.md
-docs/license.md
-docs/contributing.md
-docs/index.md
 
 # macOS
 .DS_Store
