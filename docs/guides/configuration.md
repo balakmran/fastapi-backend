@@ -16,11 +16,11 @@ cp .env.example .env
 
 ### Key Settings
 
-| Variable       | Description                              | Default                                                        |
-| :------------- | :--------------------------------------- | :------------------------------------------------------------- |
-| `ENV`          | App environment (`local`, `dev`, `prod`) | `local`                                                        |
-| `OTEL_ENABLED` | Enable OpenTelemetry                     | `true`                                                         |
-| `DATABASE_URL` | PostgreSQL connection string             | `postgresql+psycopg://postgres:postgres@localhost:5432/app_db` |
+| Variable       | Description                     | Default                                                        |
+| :------------- | :------------------------------ | :------------------------------------------------------------- |
+| `APP_ENV`      | App environment (`dev`, `prod`) | `dev`                                                          |
+| `OTEL_ENABLED` | Enable OpenTelemetry            | `true`                                                         |
+| `DATABASE_URL` | PostgreSQL connection string    | `postgresql+psycopg://postgres:postgres@localhost:5432/app_db` |
 
 ## Core Settings Module
 
@@ -30,8 +30,8 @@ All settings are defined in `app/core/config.py`. The `Settings` class defines t
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "FastAPI Backend"
+    APP_ENV: str = "dev"
+    OTEL_ENABLED: bool = True
     # ...
 ```
 

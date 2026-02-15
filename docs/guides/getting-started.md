@@ -16,42 +16,25 @@ Ensure you have the following tools installed:
 
 Follow these steps to get up and running in minutes.
 
-### 1. Clone the Repository
-
 ```bash
+# 1. Clone the Repository
 git clone https://github.com/balakmran/fastapi-backend.git
 cd fastapi-backend
-```
 
-### 2. Install Dependencies
+# 2. Setup Project
+# Use `just` to install dependencies and pre-commit hooks.
+just setup
 
-Use `just` to install all project dependencies via `uv`.
-
-```bash
-just install
-```
-
-### 3. Start the Database
-
-Start the PostgreSQL database container in the background.
-
-```bash
+# 3. Start the Database
+# Start the PostgreSQL database container in the background.
 just db
-```
 
-### 4. Apply Migrations
-
-Run Alembic migrations to set up the database schema.
-
-```bash
+# 4. Apply Migrations
+# Run Alembic migrations to set up the database schema.
 just migrate-up
-```
 
-### 5. Run the Server
-
-Start the local development server with auto-reload enabled.
-
-```bash
+# 5. Run the Server
+# Start the local development server with auto-reload enabled.
 just run
 ```
 

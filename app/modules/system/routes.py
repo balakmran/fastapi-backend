@@ -1,22 +1,33 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core import metadata
 from app.db.session import get_session
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root(request: Request) -> HTMLResponse:
     """Root endpoint to verify the application is running."""
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"message": "All Systems Operational"},
+        context={
+            "message": "All Systems Operational",
+            "app_name": metadata.APP_NAME,
+            "app_version": metadata.VERSION,
+            "app_description": metadata.APP_DESCRIPTION,
+            "repository_url": metadata.REPOSITORY_URL,
+            "copyright_owner": metadata.COPYRIGHT_OWNER,
+            "copyright_year": datetime.now().year,
+        },
     )
 
 

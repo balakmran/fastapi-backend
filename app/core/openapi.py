@@ -5,7 +5,7 @@ from typing import Any, NotRequired, TypedDict
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from app import __version__
+from app.core import metadata
 from app.core.config import settings
 
 
@@ -55,18 +55,12 @@ class OpenAPIParameters(TypedDict):
 
 
 OPENAPI_PARAMETERS: OpenAPIParameters = {
-    "title": settings.PROJECT_NAME,
-    "summary": "High-Performance, Scalable API Foundation.",
-    "version": __version__,
-    "description": inspect.cleandoc(
-        """
-        Built with **FastAPI**, **SQLModel**, and **PostgreSQL**.
-        Features a production-ready stack with strict type checking,
-        structured logging, and OpenTelemetry observability.
-        """
-    ),
-    "docs_url": "/docs" if settings.ENV == "dev" else None,
-    "redoc_url": "/redoc" if settings.ENV == "dev" else None,
+    "title": metadata.APP_NAME,
+    "summary": metadata.APP_DESCRIPTION,
+    "version": metadata.VERSION,
+    "description": inspect.cleandoc(metadata.APP_LONG_DESCRIPTION),
+    "docs_url": "/docs" if settings.APP_ENV == "dev" else None,
+    "redoc_url": "/redoc" if settings.APP_ENV == "dev" else None,
     "openapi_tags": APITag.metadata(),  # type: ignore
     "servers": None,
     "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},

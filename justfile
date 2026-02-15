@@ -17,6 +17,9 @@ alias release := tag
 # Development
 # =============================================================================
 
+# Setup project (install dependencies and pre-commit hooks)
+setup: install prek-install
+
 # Install all dependencies
 install:
     uv sync --all-groups

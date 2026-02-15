@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FastAPI Backend - High-Performance, Scalable API Foundation</title>
+    <title>{{ app_name }} - {{ app_description }}</title>
     <link rel="stylesheet" href="/static/css/styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,17 +16,17 @@
   <body>
     <div class="container">
       <header>
-        <div class="logo">FastAPI Backend</div>
+        <div class="logo">{{ app_name }}</div>
         <nav>
           <a href="/docs" class="nav-link">Swagger UI</a>
-          <a href="https://github.com/balakmran/fastapi-backend" class="nav-link" target="_blank">GitHub</a>
+          <a href="{{ repository_url }}" class="nav-link" target="_blank">GitHub</a>
         </nav>
       </header>
 
       <main>
         <div class="hero">
-          <h1>FastAPI Backend</h1>
-          <p class="subtitle">High-Performance, Scalable API Foundation</p>
+          <h1>{{ app_name }}</h1>
+          <p class="subtitle">{{ app_description }}</p>
 
           <div class="code-snippet">
             <code>curl -X GET <span class="url">http://127.0.0.1:8000/ready</span></code>
@@ -42,7 +42,7 @@
 
           <div class="actions">
             <a href="/docs" class="btn primary">Explore API</a>
-            <a href="https://github.com/balakmran/fastapi-backend/blob/main/CONTRIBUTING.md" class="btn secondary" target="_blank">Contribute</a>
+            <a href="{{ repository_url }}/blob/main/CONTRIBUTING.md" class="btn secondary" target="_blank">Contribute</a>
           </div>
         </div>
 
@@ -107,7 +107,7 @@
       </main>
 
       <footer>
-        <p>Copyright &copy; 2025 - 2026 Balakumaran Manoharan.</p>
+        <p>Copyright &copy; {{ copyright_year }} {{ copyright_owner }}. <span class="version">v{{ app_version }}</span></p>
         <p class="license">Licensed under the MIT License.</p>
       </footer>
     </div>

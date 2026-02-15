@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.1] - 2026-02-14
+
+### Added
+
+- **Justfile**: Added `setup` recipe to improved developer onboarding (`just setup`).
+
+### Changed
+
+- **Database**: Fixed `sessionmaker` usage in `app/db/session.py` to use `async_sessionmaker` for correct async support.
+- **Documentation**: Updated installation guides to recommend `just setup`.
+- **Prek**: Optimized `prek.toml` to use faster builtin hooks instead of GitHub pre-commit hooks.
+- **Refactoring**: Extracted application metadata (version, description, URLs) to `app/core/metadata.py`.
+- **Templates**: Injected dynamic metadata into `index.html` (title, description, version, copyright).
+- **Swagger UI**: Hidden root endpoint (`GET /`) from API documentation.
+
 ## [0.3.0] - 2026-02-09
 
 ### Added

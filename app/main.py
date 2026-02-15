@@ -23,11 +23,9 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Manage application lifecycle."""
-        logger.info("Startup")
         init_db()
         yield
         await close_db()
-        logger.info("Shutdown")
 
     app = FastAPI(lifespan=lifespan, **OPENAPI_PARAMETERS)
     set_openapi_generator(app)

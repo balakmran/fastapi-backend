@@ -27,8 +27,8 @@ type checking, structured logging, and OpenTelemetry observability.
 ## ⚡️ Quick Start
 
 ```bash
-# 1. Install dependencies
-just install
+# 1. Setup project (install dependencies & pre-commit hooks)
+just setup
 
 # 2. Start database (Docker)
 just db

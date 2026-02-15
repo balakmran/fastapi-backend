@@ -27,7 +27,7 @@ Ensure you have the following tools installed:
 2.  **Install dependencies:**
 
     ```bash
-    just install
+    just setup
     ```
 
 3.  **Start the database:**
@@ -93,23 +93,24 @@ We enforce strict coding standards to maintain a high-quality codebase.
 We use `just` to manage project commands. Run `just --list` to see all available
 commands.
 
-| Command                  | Description                                            |
-| :----------------------- | :----------------------------------------------------- |
-| `just install`           | Install project dependencies using `uv`                |
-| `just run`               | Start the local development server with auto-reload    |
-| `just db`                | Start only the PostgreSQL database container           |
-| `just up`                | Start all Docker containers (App + DB)                 |
-| `just down`              | Stop and remove all Docker containers                  |
-| `just check`             | Run all quality checks (format, lint, typecheck, test) |
-| `just clean`             | Remove build artifacts and cache directories           |
-| `just pi`                | Install pre-commit hooks (`prek install`)              |
-| `just pr`                | Run pre-commit hooks on all files (`prek run`)         |
-| `just docb`              | Build documentation (`docs-build`)                     |
-| `just ds`                | Serve documentation locally (`docs-serve`)             |
-| `just migrate-gen "msg"` | Generate a new Alembic migration with a message        |
-| `just migrate-up`        | Apply all pending migrations                           |
-| `just bump part`         | Bump version (part: `patch`, `minor`, `major`)         |
-| `just tag`               | Create and push git tag for current version            |
+| Command                  | Description                                               |
+| :----------------------- | :-------------------------------------------------------- |
+| `just setup`             | Setup project (install dependencies and pre-commit hooks) |
+| `just install`           | Install project dependencies using `uv`                   |
+| `just run`               | Start the local development server with auto-reload       |
+| `just db`                | Start only the PostgreSQL database container              |
+| `just up`                | Start all Docker containers (App + DB)                    |
+| `just down`              | Stop and remove all Docker containers                     |
+| `just check`             | Run all quality checks (format, lint, typecheck, test)    |
+| `just clean`             | Remove build artifacts and cache directories              |
+| `just pi`                | Install pre-commit hooks (`prek install`)                 |
+| `just pr`                | Run pre-commit hooks on all files (`prek run`)            |
+| `just docb`              | Build documentation (`docs-build`)                        |
+| `just ds`                | Serve documentation locally (`docs-serve`)                |
+| `just migrate-gen "msg"` | Generate a new Alembic migration with a message           |
+| `just migrate-up`        | Apply all pending migrations                              |
+| `just bump part`         | Bump version (part: `patch`, `minor`, `major`)            |
+| `just tag`               | Create and push git tag for current version               |
 
 ## 📁 Project Structure
 

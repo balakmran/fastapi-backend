@@ -10,11 +10,13 @@ class Settings(BaseSettings):
         env_file=".env", env_ignore_empty=True, extra="ignore"
     )
 
-    ENV: str = "dev"
-    PROJECT_NAME: str = "FastAPI Backend"
+    # Application
+    APP_ENV: str = "dev"
     OTEL_ENABLED: bool = True
 
-    POSTGRES_SERVER: str = "localhost"
+    # Database
+    POSTGRES_DRIVER: str = "postgresql+asyncpg"
+    POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
@@ -25,10 +27,10 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> PostgresDsn:
         """Assemble the database URL."""
         return MultiHostUrl.build(  # type: ignore[return-value]
-            scheme="postgresql+asyncpg",
+            scheme=self.POSTGRES_DRIVER,
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
+            host=self.POSTGRES_HOST,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )

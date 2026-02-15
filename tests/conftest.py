@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -47,11 +47,11 @@ async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession, None]:
     trans = await connection.begin()
 
     # Create a session bound to the connection
-    session_maker = sessionmaker(
+    session_maker = async_sessionmaker(
         bind=connection,
         class_=AsyncSession,
         expire_on_commit=False,
-    )  # type: ignore
+    )
     session = session_maker()
 
     try:

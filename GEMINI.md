@@ -25,6 +25,7 @@ The project uses `just` to automate common tasks.
 
 | Command                    | Action                                                      |
 | :------------------------- | :---------------------------------------------------------- |
+| `just setup`               | Setup project (install dependencies and pre-commit hooks).  |
 | `just install`             | Install all dependencies (dev included) using `uv`.         |
 | `just run`                 | Start the local development server (auto-reload enabled).   |
 | `just up`                  | Start all services (App + DB) via Docker Compose.           |
@@ -154,5 +155,15 @@ structure:
 - **Tagging:** After bumping the version and merging to main, run `just tag` to
   create and push the git tag (e.g., `v0.2.0`). This triggers the GitHub
   Release.
-- **Changelog:** Always update `CHANGELOG.md` with a new version header and
-  release date before bumping the version.
+- **Changelog:**
+  - **Update Policy**: `CHANGELOG.md` MUST be updated after **every** meaningful
+    code change.
+  - **Section Order**: Within a release, group changes in the following strict
+    order:
+    1.  `### Added` (for new features)
+    2.  `### Changed` (for changes in existing functionality)
+    3.  `### Deprecated` (for soon-to-be removed features)
+    4.  `### Removed` (for now removed features)
+    5.  `### Fixed` (for any bug fixes)
+    6.  `### Security` (in case of vulnerabilities)
+  - Always update the `[Unreleased]` section until a new version is bumped.

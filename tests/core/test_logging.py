@@ -27,7 +27,7 @@ def test_setup_logging() -> None:
 def test_setup_logging_prod() -> None:
     """Test setup_logging configuration in production."""
     with (
-        patch("app.core.logging.settings.ENV", "prod"),
+        patch("app.core.logging.settings.APP_ENV", "prod"),
         patch("structlog.configure") as mock_configure,
     ):
         setup_logging()
@@ -44,7 +44,7 @@ def test_setup_logging_prod() -> None:
 def test_setup_logging_not_dev() -> None:
     """Test setup_logging stdlib configuration in non-dev environment."""
     with (
-        patch("app.core.logging.settings.ENV", "prod"),
+        patch("app.core.logging.settings.APP_ENV", "prod"),
         patch("logging.getLogger") as mock_get_logger,
         patch("logging.StreamHandler"),
     ):
