@@ -22,19 +22,15 @@ git clone https://github.com/balakmran/quoin-api.git
 cd quoin-api
 
 # 2. Setup Project
-# Use `just` to install dependencies and pre-commit hooks.
 just setup
 
 # 3. Start the Database
-# Start the PostgreSQL database container in the background.
 just db
 
 # 4. Apply Migrations
-# Run Alembic migrations to set up the database schema.
 just migrate-up
 
 # 5. Run the Server
-# Start the local development server with auto-reload enabled.
 just run
 ```
 
@@ -66,6 +62,7 @@ Understanding the project layout will help you navigate the codebase.
 │   ├── db/                     # Database session and base models
 │   ├── modules/                # Domain-specific feature modules (e.g., user)
 │   │   └── user/               # Example module
+│   │       ├── exceptions.py   # Domain-specific exceptions
 │   │       ├── models.py       # database tables
 │   │       ├── schemas.py      # Pydantic models
 │   │       ├── repository.py   # CRUD operations

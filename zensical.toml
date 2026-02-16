@@ -28,7 +28,7 @@ nav = [
         { "Design Decisions" = "architecture/design-decisions.md" },
     ]},
     { "API Reference" = [
-        { "Overview" = "api/overview.md" },
+        { "Overview" = "guides/api-overview.md" },
         { "Core" = "api/core.md" },
         { "User" = "api/user.md" },
     ]},
