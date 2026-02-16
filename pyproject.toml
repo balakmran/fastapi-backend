@@ -49,6 +49,7 @@ test = [
 ]
 docs = [
     "zensical==0.0.23",
+    "mkdocstrings-python>=2.0.2",
 ]
 
 [tool.ruff]

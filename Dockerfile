@@ -22,6 +22,10 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application code
 COPY app/ app/
 
+# Copy alembic for database migrations
+COPY alembic/ alembic/
+COPY alembic.ini .
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"

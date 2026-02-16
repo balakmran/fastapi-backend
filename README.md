@@ -52,6 +52,7 @@ Visit the API documentation at
 │   │   ├── exceptions.py         # Custom exceptions
 │   │   ├── exception_handlers.py # Global exception handlers
 │   │   ├── logging.py            # Structlog configuration
+│   │   ├── metadata.py           # Application metadata
 │   │   ├── middlewares.py        # Middleware configuration
 │   │   ├── openapi.py            # OpenAPI metadata & config
 │   │   └── telemetry.py          # OpenTelemetry instrumentation
@@ -69,7 +70,7 @@ Visit the API documentation at
 ├── tests/                        # Pytest suite
 ├── alembic/                      # Database migrations
 ├── docs/                         # Documentation
-├── .env                          # Environment variables
+├── .env.example                # Environment variables template
 ├── docker-compose.yml            # Local dev environment
 ├── Dockerfile                    # Production Docker image
 ├── GEMINI.md                     # AI Agent context

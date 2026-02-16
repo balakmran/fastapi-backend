@@ -43,6 +43,18 @@ The application will be available at [http://127.0.0.1:8000](http://127.0.0.1:80
 - **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **Redoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
+## 📸 Application Home Page
+
+When you visit [http://127.0.0.1:8000](http://127.0.0.1:8000), you'll see the application's home page:
+
+![FastAPI Backend Home Page](../assets/images/fastapi-backend-homepage.png)
+
+This confirms the application is running correctly. The page includes:
+
+- Application name, version, and description
+- Quick links to API documentation (Swagger UI and ReDoc)
+- Health check endpoint status
+
 ## 📁 Project Structure
 
 Understanding the project layout will help you navigate the codebase.
@@ -56,6 +68,7 @@ Understanding the project layout will help you navigate the codebase.
 │   │   └── user/               # Example module
 │   │       ├── models.py       # database tables
 │   │       ├── schemas.py      # Pydantic models
+│   │       ├── repository.py   # CRUD operations
 │   │       ├── routes.py       # API endpoints
 │   │       └── service.py      # Business logic
 │   └── main.py                 # Application entry point

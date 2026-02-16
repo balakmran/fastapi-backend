@@ -43,7 +43,7 @@ just run
 
 After running the server, you can visit [http://127.0.0.1:8000](http://127.0.0.1:8000) to see the application's home page:
 
-![FastAPI Backend Home Page](./docs/assets/images/fastapi-backend-homepage.png)
+![FastAPI Backend Home Page](../assets/images/fastapi-backend-homepage.png)
 
 This confirms the application is running correctly. The page includes:
 

@@ -13,13 +13,17 @@ title: Home
 **SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
 type checking, structured logging, and OpenTelemetry observability.
 
+---
+
 ## 🚀 Key Features
 
 - **High Performance**: Async I/O with FastAPI and Pydantic.
 - **Type Safe**: 100% type-annotated, verified by `ty`.
-- **Observable**: integrated OpenTelemetry traces and structured logging.
+- **Observable**: Integrated OpenTelemetry traces and structured logging.
 - **Developer First**: Powered by `uv` for package management and `just` for
   automation.
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -27,6 +31,10 @@ type checking, structured logging, and OpenTelemetry observability.
 - **Database**: PostgreSQL, AsyncPG, Alembic
 - **Tooling**: uv, Ruff, Ty, Pytest
 - **Observability**: OpenTelemetry, Structlog
+
+Learn more about our [technology choices and design decisions →](architecture/design-decisions.md)
+
+---
 
 ## ⚡️ Quick Start
 
@@ -47,6 +55,44 @@ just run
 Visit the API documentation at
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
+**Need help?** Check out the [Getting Started Guide →](guides/getting-started.md)
+
+---
+
+## 📸 Running Application
+
+![FastAPI Backend Home Page](assets/images/fastapi-backend-homepage.png)
+
+The application home page provides real-time health indicators and quick links
+to API documentation.
+
+---
+
+## ️ Architecture
+
+```mermaid
+graph TB
+    Client[Client/Browser] -->|HTTP| FastAPI[FastAPI Application]
+    FastAPI -->|Business Logic| Service[Service Layer]
+    Service -->|Database Access| Repository[Repository Layer]
+    Repository -->|SQL| PostgreSQL[(PostgreSQL)]
+
+    FastAPI -->|Structured Logs| Structlog[Structlog]
+    FastAPI -->|Traces| OTEL[OpenTelemetry]
+
+    Service -->|Domain Exceptions| Handlers[Exception Handlers]
+    Handlers -->|JSON Response| Client
+
+    style FastAPI fill:#26C6DA
+    style PostgreSQL fill:#42A5F5
+    style Service fill:#FF6B6B
+    style Repository fill:#66BB6A
+```
+
+Read the [full architecture documentation →](architecture/overview.md)
+
+---
+
 ## 📂 Project Structure
 
 ```plaintext
@@ -56,41 +102,64 @@ Visit the API documentation at
 │   │   ├── exceptions.py         # Custom exceptions
 │   │   ├── exception_handlers.py # Global exception handlers
 │   │   ├── logging.py            # Structlog configuration
+│   │   ├── metadata.py           # Application metadata
 │   │   ├── middlewares.py        # Middleware configuration
-│   │   ├── openapi.py            # OpenAPI metadata & config
+│   │   ├── openapi.py            # OpenAPI configuration
 │   │   └── telemetry.py          # OpenTelemetry instrumentation
 │   ├── db/                       # Database connection & base models
 │   ├── modules/
-│   │   └── user/                 # Example domain module
+│   │   ├── system/               # System health & status
+│   │   └── user/                 # User management module
 │   │       ├── models.py         # SQLModel database tables
 │   │       ├── schemas.py        # Pydantic request/response models
 │   │       ├── repository.py     # Database access (CRUD)
 │   │       ├── service.py        # Business logic
 │   │       └── routes.py         # FastAPI router endpoints
-│   ├── static/                   # Static assets (css, img)
+│   ├── static/                   # Static assets
 │   ├── templates/                # Jinja2 templates
-│   └── main.py                   # App entry point
-├── tests/                        # Pytest suite
+│   └── main.py                   # Application entry point
+├── tests/                        # Pytest test suite
 ├── alembic/                      # Database migrations
-├── docs/                         # Documentation
-├── .env                          # Environment variables
+├── docs/                         # This documentation
+├── scripts/                      # Utility scripts
+├── .env.example                  # Environment variables template
 ├── docker-compose.yml            # Local dev environment
 ├── Dockerfile                    # Production Docker image
-├── GEMINI.md                     # AI Agent context
-├── justfile                      # Command runner
-├── pyproject.toml                # Dependencies & config
-└── zensical.toml                 # Documentation config
+├── justfile                      # Task runner
+└── pyproject.toml                # Dependencies & config
 ```
 
-## 📚 Changelog
+---
 
-See [Changelog](https://github.com/balakmran/fastapi-backend/blob/main/CHANGELOG.md) for version history.
+## 📖 Documentation
 
-## 📜 Contributing
+| Section                                         | Description                                                                                                             |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **📚 [Guides](guides/getting-started.md)**      | Step-by-step guides for getting started, configuration, error handling, testing, database migrations, and observability |
+| **🏗️ [Architecture](architecture/overview.md)** | System architecture overview, design decisions, component diagrams, and data flow                                       |
+| **🔌 [API Reference](api/overview.md)**         | Complete API documentation with core modules, user module, REST endpoints, and code examples                            |
+| **📋 [Project Info](project/contributing.md)**  | Contributing guide, changelog, license (MIT), and GitHub repository                                                     |
 
-See [Contributing](https://github.com/balakmran/fastapi-backend/blob/main/CONTRIBUTING.md) for details on how to contribute to this
-project.
+---
 
-## License
+## 🤝 Contributing
 
-This project is licensed under the terms of the [MIT license](https://github.com/balakmran/fastapi-backend/blob/main/LICENSE).
+We welcome contributions! Please read our [Contributing Guide](project/contributing.md)
+to learn about our development process, coding standards, and how to submit pull
+requests.
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](project/license.md)
+for details.
+
+---
+
+## 🔗 Quick Links
+
+- **GitHub Repository**: [balakmran/fastapi-backend](https://github.com/balakmran/fastapi-backend)
+- **API Docs (Swagger)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **API Docs (ReDoc)**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **Changelog**: [View version history](project/changelog.md)
