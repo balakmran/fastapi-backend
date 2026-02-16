@@ -284,15 +284,15 @@ Use `monkeypatch` to override settings:
 ```python
 async def test_with_custom_config(monkeypatch, app):
     # Override settings
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("OTEL_ENABLED", "false")
+    monkeypatch.setenv("QUOIN_ENV", "test")
+    monkeypatch.setenv("QUOIN_OTEL_ENABLED", "false")
 
     # Re-import to pick up new settings
     from importlib import reload
     from app.core import config
     reload(config)
 
-    assert config.settings.APP_ENV == "test"
+    assert config.settings.ENV == "test"
 ```
 
 ---

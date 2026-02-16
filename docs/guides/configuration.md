@@ -94,7 +94,7 @@ class Settings(BaseSettings):
 
     ENV: Environment = Environment.development
     LOG_LEVEL: str = "INFO"
-    OTEL_ENABLED: bool = True
+    QUOIN_OTEL_ENABLED: bool = True
 
     # Database - constructed from individual POSTGRES_* vars
     POSTGRES_HOST: str = "localhost"

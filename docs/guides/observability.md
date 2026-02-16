@@ -28,7 +28,7 @@ Quick comparison to understand when to use each tool:
 | **When to Use**   | Business events, debugging | Performance analysis, flow |
 | **Output Format** | JSON logs (production)     | Spans with attributes      |
 | **Overhead**      | 2-5% CPU                   | 5-10% (when enabled)       |
-| **Control**       | `APP_ENV` setting          | `OTEL_ENABLED` flag        |
+| **Control**       | `QUOIN_ENV` setting          | `QUOIN_OTEL_ENABLED` flag        |
 | **Best For**      | "What happened?"           | "How long did it take?"    |
 
 ---
@@ -48,7 +48,7 @@ setup_logging()
 
 ### Log Output Formats
 
-#### Development (`APP_ENV=dev`)
+#### Development (`QUOIN_ENV=development`)
 
 Human-readable console output:
 
@@ -57,7 +57,7 @@ Human-readable console output:
 2026-02-15T15:30:05.789012 [warning  ] app_error message=User not found status_code=404 path=/api/v1/users/xyz
 ```
 
-#### Production (`APP_ENV=prod`)
+#### Production (`QUOIN_ENV=production`)
 
 Machine-readable JSON:
 
@@ -217,8 +217,8 @@ Control via environment variable:
 
 ```bash
 # .env
-OTEL_ENABLED=True   # Enable tracing (production)
-OTEL_ENABLED=False  # Disable tracing (development)
+QUOIN_OTEL_ENABLED=True   # Enable tracing (production)
+QUOIN_OTEL_ENABLED=False  # Disable tracing (development)
 ```
 
 ---
@@ -314,8 +314,8 @@ Popular backends:
 
 ### Tracing
 
-- **Disabled** (`OTEL_ENABLED=False`): Zero overhead
-- **Enabled** (`OTEL_ENABLED=True`): ~5-10% overhead
+- **Disabled** (`QUOIN_OTEL_ENABLED=False`): Zero overhead
+- **Enabled** (`QUOIN_OTEL_ENABLED=True`): ~5-10% overhead
 
 > [!TIP]
 > For high-throughput services, consider sampling (e.g., trace 10% of
@@ -330,14 +330,14 @@ Popular backends:
 **Check:**
 
 1. Is `setup_logging()` called? (Should be in `create_app()`)
-2. Is `APP_ENV` set correctly?
+2. Is `QUOIN_ENV` set correctly?
 3. Are you using positional args instead of keyword args?
 
 ### Traces Not Captured
 
 **Check:**
 
-1. Is `OTEL_ENABLED=True`?
+1. Is `QUOIN_OTEL_ENABLED=True`?
 2. Is `setup_opentelemetry(app)` called after app creation?
 3. Are SQLAlchemy/httpx installed? (Required for auto-instrumentation)
 

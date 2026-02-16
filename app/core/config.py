@@ -15,7 +15,9 @@ class Environment(StrEnum):
 
 
 # Resolve environment before Settings loads
-env = Environment(os.getenv("ENV", Environment.development))
+env = Environment(
+    os.getenv("QUOIN_ENV", os.getenv("ENV", Environment.development))
+)
 
 # Select env file based on environment
 match env:

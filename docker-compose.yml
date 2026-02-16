@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ENV=development
+      - QUOIN_ENV=development
       - QUOIN_POSTGRES_DRIVER=postgresql+asyncpg
       - QUOIN_POSTGRES_HOST=db
       - QUOIN_POSTGRES_PORT=5432
@@ -30,7 +30,7 @@ services:
       - postgres_data:/var/lib/postgresql
 
   docs:
-    image: fastapi-backend-docs:${VERSION:-latest}
+    image: quoin-api-docs:${VERSION:-latest}
     build:
       context: .
       target: builder

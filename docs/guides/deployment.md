@@ -68,9 +68,9 @@ docker-compose up -d
 # Run PostgreSQL
 docker run -d \
   --name postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=app_db \
+  -e QUOIN_POSTGRES_USER=postgres \
+  -e QUOIN_POSTGRES_PASSWORD=postgres \
+  -e QUOIN_POSTGRES_DB=app_db \
   -p 5432:5432 \
   postgres:17-alpine
 
@@ -79,7 +79,7 @@ docker run -d \
   --name quoin-api \
   --link postgres:db \
   -p 8000:8000 \
-  -e POSTGRES_HOST=db \
+  -e QUOIN_POSTGRES_HOST=db \
   quoin-api:latest
 ```
 
@@ -94,15 +94,15 @@ Configure the application using environment variables. See
 
 ```bash
 # Application
-APP_ENV=prod
-OTEL_ENABLED=true
+QUOIN_ENV=production
+QUOIN_OTEL_ENABLED=true
 
 # Database
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=<strong-password>
-POSTGRES_DB=app_db
+QUOIN_POSTGRES_HOST=db
+QUOIN_POSTGRES_PORT=5432
+QUOIN_POSTGRES_USER=postgres
+QUOIN_POSTGRES_PASSWORD=<strong-password>
+QUOIN_POSTGRES_DB=app_db
 ```
 
 > **Security Warning**: Never commit `.env` files with production credentials to
