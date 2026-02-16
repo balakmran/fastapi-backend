@@ -36,7 +36,7 @@ async def test_health(app: FastAPI):
     ) as ac:
         response = await ac.get("/health")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "healthy"}
 
 
 @pytest.mark.asyncio
