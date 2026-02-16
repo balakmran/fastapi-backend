@@ -1,39 +1,36 @@
 # Changelog
 
-## [0.4.0] - 2026-02-16
+## [Unreleased]
 
 ### Added
 
-- **Domain Exceptions**: `NotFoundError`, `ConflictError`, `BadRequestError`,
-  `ForbiddenError` subclasses for better error handling granularity.
-- **`__all__` Exports**: Explicit public API exports in all core modules and
-  domain routers.
-- **Pagination Guards**: `Query(ge=0)`, `Query(ge=1, le=100)` constraints on
-  pagination parameters to prevent abuse.
-- **Alembic in Docker**: Copied `alembic/` directory and `alembic.ini` into
-  Docker image for production database migrations.
+- **API Versioning**: Introduced `/api/v1/` prefix to all endpoints for future-proof API evolution.
+- **Module-Level Exceptions**: Added `app/modules/user/exceptions.py` and `SystemError` (in system module) for domain-specific error handling.
+- **Environment Configuration**: Added `Environment` enum and `.env.test`/`.env.production` support.
+- **Project Rename**: Officially renamed project from "FastAPI Backend" to **QuoinAPI** (pronounced "koyn").
+- **Architectural Branding**: Updated README and Metadata with "Structural Integrity", "High-Performance Core", and "Built-in Observability" pillars.
 
 ### Changed
 
-- **Database Engine**: Refactored from global mutable engine to
-  `app.state.engine` pattern for better test isolation and cleaner
-  architecture.
-- **Logging**: Moved `setup_logging()` call inside `create_app()` to prevent
-  import-time side effects.
-- **Schema Validation**: Added `extra="forbid"` to `UserBase` and `UserUpdate`
-  schemas to reject extraneous fields.
-- **Static Files**: Updated to use absolute paths for static files and
-  templates, avoiding relative path fragility.
-- **OTEL Service Name**: Now uses `metadata.APP_NAME` instead of hardcoded
-  string.
-- **Docker Compose**: Renamed `ENV` → `APP_ENV`, replaced stale `DATABASE_URL`
-  with individual `POSTGRES_*` variables.
-- **Test Fixtures**: Refactored to use `monkeypatch` for settings mutation in
-  tests, avoiding direct global state modification.
-- **CI Workflows**: Standardized `setup-uv` action version to `v7` across all
-  workflows.
-- **Documentation**: Updated Zensical config with instant navigation, prefetch,
-  progress, and modern `mkdocstrings` TOML format.
+- **Configuration**:
+  - Renamed environment variable prefix from `APP_` to `QUOIN_` (e.g., `QUOIN_ENV`, `QUOIN_DB_URL`).
+  - Enforced `QUOIN_ENV` (or fallback `ENV`) to select configuration files.
+  - Replaced `DEBUG` boolean with `LOG_LEVEL` string (default: "INFO").
+- **Error Handling**:
+  - Renamed `AppError` to `QuoinError` as the base exception class.
+  - Standardized error responses with `QuoinRequestValidationError` for Pydantic errors.
+  - Updated `exception_handlers.py` to use new exception hierarchy.
+- **Docker**:
+  - Renamed services and images to `quoin-api` and `quoin-api-docs`.
+  - Updated `docker-compose.yml` to use `QUOIN_ENV` and `QUOIN_POSTGRES_*` variables.
+- **Documentation**:
+  - Updated all guides to reflect `QuoinAPI` naming and `QUOIN_` configuration prefix.
+  - Updated branding assets and repository URLs to `balakmran/quoin-api`.
+
+### Removed
+
+- **Legacy Config**: Removed support for `APP_ENV` (use `QUOIN_ENV`).
+- **Legacy Naming**: Removed references to `fastapi-backend` in all documentation and config files.
 
 ### Fixed
 

@@ -2,9 +2,7 @@
 
 ## Project Overview
 
-**High-Performance, Scalable API Foundation** built with **FastAPI**,
-**SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
-type checking, structured logging, and OpenTelemetry observability.
+**QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation designed to serve as the structural cornerstone for modern Python backends. Built with **FastAPI**, **SQLModel**, and the **Astral stack** (uv, ruff, ty), it provides a battle-tested "Golden Path" for developers who prioritize architectural integrity, type safety, and observability.
 
 ## 🛠 Tech Stack & Tools
 
@@ -55,17 +53,17 @@ The project follows a modular structure within the `app/` directory:
 - **`app/main.py`**: Application entry point. Configures lifecycle, middleware,
   and exception handlers.
 - **`app/core/`**: Core infrastructure.
-  - `config.py`: Application settings using `pydantic-settings` (reads `.env`).
+  - `config.py`: Application settings using `pydantic-settings` (prioritizes `QUOIN_ENV`).
   - `logging.py`: Structured logging setup (structlog).
-  - `metadata.py`: Application metadata (version, description, URLs).
+  - `metadata.py`: Application metadata (QuoinAPI branding).
   - `openapi.py`: OpenAPI/Swagger configuration.
   - `telemetry.py`: OpenTelemetry instrumentation.
   - `middlewares.py`: Middleware configuration.
-  - `exceptions.py`, `exception_handlers.py`: Global error handling.
+  - `exceptions.py`, `exception_handlers.py`: Global error handling (`QuoinError`).
 - **`app/db/`**: Database configuration. Engine stored on `app.state.engine`.
 - **`app/modules/`**: Feature modules (Domain-Driven Design).
   - Example: `app/modules/user/` contains `models.py`, `schemas.py`,
-    `routes.py`, `service.py`, `repository.py`.
+    `routes.py`, `service.py`, `repository.py`, `exceptions.py`.
   - `system/`: Health checks and system status endpoints.
 - **`tests/`**: Test suite mirroring the app structure.
 - **`alembic/`**: Database migration scripts.
@@ -104,9 +102,10 @@ The project follows a modular structure within the `app/` directory:
 ### Configuration
 
 - Environment variables are managed via `.env` files.
+- **Prefix**: All environment variables use `QUOIN_` prefix (e.g., `QUOIN_ENV`, `QUOIN_DB_URL`).
+- **Environment**: Controlled by `QUOIN_ENV` (`development`, `test`, `production`).
 - Copy `.env.example` to `.env` for local development.
 - Configuration is loaded into the `Settings` class in `app/core/config.py`.
-- `uv.lock` ensures deterministic dependency resolution.
 
 ### Testing
 
@@ -115,13 +114,13 @@ The project follows a modular structure within the `app/` directory:
 - Run `just check` to run all quality checks (includes tests).
 - Ensure ≥95% test coverage for new features.
 - **Philosophy**: Integration tests over unit tests. Use real database.
+- **Fixtures**: Use `monkeypatch.setenv("QUOIN_ENV", "test")` to override settings.
 
 ## 🔑 Key Files
 
 - `justfile`: Definition of all executable task commands.
-- `pyproject.toml`: Project configuration, dependencies, and tool settings
-  (Ruff, Pytest).
-- `docker-compose.yml`: Definition of local dev services (Postgres).
+- `pyproject.toml`: Project configuration, dependencies, and tool settings.
+- `docker-compose.yml`: Definition of local dev services (Postgres, QuoinAPI).
 - `Dockerfile`: Production-ready container image.
 - `app/main.py`: The FastAPI application factory.
 - `zensical.toml`: Documentation site configuration.
@@ -137,6 +136,7 @@ structure:
 - `repository.py`: CRUD operations (database interaction only).
 - `service.py`: Business logic (calls repository).
 - `routes.py`: FastAPI router endpoints (calls service).
+- `exceptions.py`: Module-specific exceptions inheriting from `QuoinError`.
 - `__init__.py`: Expose the router as `router`.
 
 **Example workflow**:
@@ -162,6 +162,7 @@ structure:
   `test_create_user_duplicate_email_fails`).
 - **Coverage:** Maintain ≥95% coverage. View reports with
   `pytest --cov=app --cov-report=html`.
+- **API Versioning**: All endpoints must be prefixed with `/api/v1/`.
 
 ### 📦 Git & Commits
 
@@ -173,7 +174,7 @@ structure:
 
 ### ⚠️ Error Handling
 
-- Use the custom `AppError` (or specific subclasses) for logic errors.
+- Use the custom `QuoinError` (or specific subclasses) for logic errors.
 - **Do not** raise generic HTTPExceptions (`HTTPException(status_code=400)`) in
   services; raise domain exceptions instead, and let the router or exception
   handler map them to HTTP status codes.
