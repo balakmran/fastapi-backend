@@ -1,15 +1,21 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import status
+from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
 
 from app.db.session import get_session
 from app.main import create_app
 
 
+@pytest.fixture
+def app() -> FastAPI:
+    """Create a FastAPI app for testing."""
+    return create_app()
+
+
 @pytest.mark.asyncio
-async def test_root():
+async def test_root(app: FastAPI):
     """Test the root endpoint."""
     app = create_app()
     async with AsyncClient(
@@ -23,9 +29,8 @@ async def test_root():
 
 
 @pytest.mark.asyncio
-async def test_health():
+async def test_health(app: FastAPI):
     """Test the health endpoint."""
-    app = create_app()
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
@@ -35,9 +40,8 @@ async def test_health():
 
 
 @pytest.mark.asyncio
-async def test_ready_success():
+async def test_ready_success(app: FastAPI):
     """Test the readiness endpoint when DB is available."""
-    app = create_app()
 
     # Mock the session dependency
     async def mock_get_session():
@@ -57,9 +61,8 @@ async def test_ready_success():
 
 
 @pytest.mark.asyncio
-async def test_ready_failure():
+async def test_ready_failure(app: FastAPI):
     """Test the readiness endpoint when DB is unavailable."""
-    app = create_app()
 
     # Mock the session dependency to raise exception
     async def mock_get_session():

@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.openapi import APITag
@@ -34,8 +34,8 @@ async def create_user(
 @router.get("/", response_model=list[UserRead])
 async def list_users(
     service: Annotated[UserService, Depends(get_user_service)],
-    skip: int = 0,
-    limit: int = 100,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> list[User]:
     """List users."""
     return await service.list_users(skip, limit)

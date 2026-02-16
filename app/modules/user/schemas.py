@@ -11,6 +11,8 @@ class UserBase(BaseModel):
     full_name: str | None = None
     is_active: bool = True
 
+    model_config = ConfigDict(extra="forbid")
+
 
 class UserCreate(UserBase):
     """Schema for creating a user."""
@@ -24,6 +26,8 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     full_name: str | None = None
     is_active: bool | None = None
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class UserRead(BaseModel):

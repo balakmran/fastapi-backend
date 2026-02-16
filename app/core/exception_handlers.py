@@ -11,6 +11,12 @@ async def app_exception_handler(
     request: Request, exc: AppError
 ) -> JSONResponse:
     """Handle AppError exceptions."""
+    logger.warning(
+        "app_error",
+        message=exc.message,
+        status_code=exc.status_code,
+        path=request.url.path,
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},

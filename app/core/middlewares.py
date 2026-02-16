@@ -31,3 +31,6 @@ def configure_middlewares(app: FastAPI) -> None:
     """Configure all application middlewares."""
     configure_cors(app)
     configure_trusted_hosts(app)
+
+
+__all__ = ["configure_cors", "configure_middlewares", "configure_trusted_hosts"]

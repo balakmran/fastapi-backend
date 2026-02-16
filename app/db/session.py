@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 
+from fastapi import Request
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     async_sessionmaker,
@@ -9,13 +10,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 
-engine: AsyncEngine | None = None
 
-
-def init_db() -> None:
-    """Initialize the database engine."""
-    global engine  # noqa: PLW0603
-    engine = create_async_engine(
+def create_db_engine() -> AsyncEngine:
+    """Create and return a new async database engine."""
+    return create_async_engine(
         str(settings.DATABASE_URL),
         echo=False,
         future=True,
@@ -25,16 +23,11 @@ def init_db() -> None:
     )
 
 
-async def close_db() -> None:
-    """Close the database engine."""
-    global engine  # noqa: PLW0603
-    if engine:
-        await engine.dispose()
-        engine = None
-
-
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Get a new database session."""
+async def get_session(
+    request: Request,
+) -> AsyncGenerator[AsyncSession, None]:
+    """Get a database session from app.state.engine."""
+    engine: AsyncEngine | None = getattr(request.app.state, "engine", None)
     if not engine:
         raise RuntimeError("Database engine is not initialized")
 

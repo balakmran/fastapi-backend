@@ -12,3 +12,12 @@ structured logging, and OpenTelemetry observability.
 """
 
 VERSION = __version__
+
+__all__ = [
+    "APP_DESCRIPTION",
+    "APP_LONG_DESCRIPTION",
+    "APP_NAME",
+    "COPYRIGHT_OWNER",
+    "REPOSITORY_URL",
+    "VERSION",
+]

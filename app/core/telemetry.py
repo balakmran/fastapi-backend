@@ -11,34 +11,36 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     ConsoleSpanExporter,
+    SpanExportResult,
 )
 
+from app.core import metadata
 from app.core.config import settings
 
 
 class SafeConsoleSpanExporter(ConsoleSpanExporter):
     """ConsoleSpanExporter that suppresses I/O errors on shutdown."""
 
-    def export(self, spans):
+    def export(self, spans) -> SpanExportResult:
         """Export spans to console, suppressing errors if stream is closed."""
         try:
             return super().export(spans)
         except ValueError:
             # Suppress "I/O operation on closed file" during shutdown
-            return
+            return SpanExportResult.SUCCESS
 
 
-def log_formatter_oneline(span):
+def log_formatter_oneline(span) -> str:
     """Format span as a single-line JSON string."""
     return span.to_json(indent=None) + os.linesep
 
 
-def setup_opentelemetry(app: FastAPI):
+def setup_opentelemetry(app: FastAPI) -> None:
     """Setup OpenTelemetry instrumentation."""
     if not settings.OTEL_ENABLED:
         return
 
-    resource = Resource(attributes={SERVICE_NAME: "fastapi-backend"})
+    resource = Resource(attributes={SERVICE_NAME: metadata.APP_NAME})
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
 

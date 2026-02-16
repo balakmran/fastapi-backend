@@ -46,6 +46,9 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    # Replace async driver with sync equivalent for offline SQL generation
+    if url:
+        url = url.replace("postgresql+asyncpg", "postgresql+psycopg")
     context.configure(
         url=url,
         target_metadata=target_metadata,

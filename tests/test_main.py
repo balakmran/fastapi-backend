@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
@@ -10,12 +10,10 @@ from app.main import create_app
 @pytest.fixture(autouse=True)
 def mock_db_lifecycle():
     """Mock database lifecycle events to avoid connection attempts."""
-    with (
-        patch("tests.conftest.init_db"),
-        patch("tests.conftest.close_db"),
-        patch("app.main.init_db"),
-        patch("app.main.close_db"),
-    ):
+    mock_engine = MagicMock()
+    mock_engine.dispose = AsyncMock()
+
+    with patch("app.db.session.create_db_engine", return_value=mock_engine):
         yield
 
 

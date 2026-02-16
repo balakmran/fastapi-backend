@@ -6,31 +6,31 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-import app.db.session
 from app.core.config import settings
-from app.db.session import close_db, get_session, init_db
+from app.db.session import create_db_engine, get_session
 from app.main import app as fastapi_app
 
 
 @pytest.fixture(scope="function", autouse=True)
-async def initialize_db() -> AsyncGenerator[None, None]:
+async def initialize_db(
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncGenerator[None, None]:
     """Initialize the database engine for the test session."""
-    settings.POSTGRES_DB = "postgres"
-    init_db()
+    monkeypatch.setattr(settings, "POSTGRES_DB", "postgres")
+    fastapi_app.state.engine = create_db_engine()
 
     # Create tables
-    if app.db.session.engine:
-        async with app.db.session.engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
+    async with fastapi_app.state.engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
 
     yield
 
     # Drop tables (optional, but good for cleanup)
-    if app.db.session.engine:
-        async with app.db.session.engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.drop_all)
+    async with fastapi_app.state.engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
 
-    await close_db()
+    await fastapi_app.state.engine.dispose()
+    fastapi_app.state.engine = None
 
 
 @pytest.fixture
@@ -40,10 +40,10 @@ async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession, None]:
     The rollback happens after the test completes. This guarantees that the
     database is cleaned up after each test.
     """
-    if not app.db.session.engine:
+    if not fastapi_app.state.engine:
         raise RuntimeError("Database engine is not initialized")
 
-    connection = await app.db.session.engine.connect()
+    connection = await fastapi_app.state.engine.connect()
     trans = await connection.begin()
 
     # Create a session bound to the connection

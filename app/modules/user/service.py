@@ -1,7 +1,6 @@
 import uuid
 
-from fastapi import HTTPException, status
-
+from app.core.exceptions import ConflictError, NotFoundError
 from app.modules.user.models import User
 from app.modules.user.repository import UserRepository
 from app.modules.user.schemas import UserCreate, UserUpdate
@@ -18,19 +17,14 @@ class UserService:
         """Create a new user."""
         existing_user = await self.repository.get_by_email(user_create.email)
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-            )
+            raise ConflictError(message="Email already registered")
         return await self.repository.create(user_create)
 
     async def get_user(self, user_id: uuid.UUID) -> User:
         """Get a user by ID."""
         user = await self.repository.get(user_id)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
+            raise NotFoundError(message="User not found")
         return user
 
     async def list_users(self, skip: int = 0, limit: int = 100) -> list[User]:

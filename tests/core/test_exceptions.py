@@ -3,7 +3,14 @@ from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
 
 from app.core.exception_handlers import add_exception_handlers
-from app.core.exceptions import AppError, InternalServerError
+from app.core.exceptions import (
+    AppError,
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    InternalServerError,
+    NotFoundError,
+)
 
 
 def test_app_error_init() -> None:
@@ -60,3 +67,35 @@ async def test_exception_handlers() -> None:
         # Test generic exception handler (should raise exception)
         with pytest.raises(ValueError):
             await ac.get("/generic_error")
+
+
+@pytest.mark.asyncio
+async def test_not_found_error() -> None:
+    """Test NotFoundError initialization and handler."""
+    err = NotFoundError(message="User not found")
+    assert err.message == "User not found"
+    assert err.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_conflict_error() -> None:
+    """Test ConflictError initialization and handler."""
+    err = ConflictError(message="Email already exists")
+    assert err.message == "Email already exists"
+    assert err.status_code == status.HTTP_409_CONFLICT
+
+
+@pytest.mark.asyncio
+async def test_bad_request_error() -> None:
+    """Test BadRequestError initialization and handler."""
+    err = BadRequestError(message="Invalid input")
+    assert err.message == "Invalid input"
+    assert err.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_forbidden_error() -> None:
+    """Test ForbiddenError initialization and handler."""
+    err = ForbiddenError(message="Access denied")
+    assert err.message == "Access denied"
+    assert err.status_code == status.HTTP_403_FORBIDDEN

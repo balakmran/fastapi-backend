@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
@@ -10,7 +11,9 @@ from app.core import metadata
 from app.db.session import get_session
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(
+    directory=Path(__file__).resolve().parent.parent.parent / "templates"
+)
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -26,7 +29,7 @@ async def root(request: Request) -> HTMLResponse:
             "app_description": metadata.APP_DESCRIPTION,
             "repository_url": metadata.REPOSITORY_URL,
             "copyright_owner": metadata.COPYRIGHT_OWNER,
-            "copyright_year": datetime.now().year,
+            "copyright_year": datetime.now(UTC).year,
         },
     )
 

@@ -13,8 +13,6 @@ async def test_create_user(client: AsyncClient):
         json={
             "email": "test@example.com",
             "full_name": "Test User",
-            # Note: Password handling not implemented yet
-            "password": "password123",
         },
     )
     assert response.status_code == status.HTTP_201_CREATED
@@ -39,7 +37,7 @@ async def test_create_user_duplicate_email(client: AsyncClient):
         "/users/",
         json={"email": "duplicate@example.com", "full_name": "Second User"},
     )
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_409_CONFLICT
     assert "Email already registered" in response.json()["detail"]
 
 
