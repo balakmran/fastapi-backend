@@ -11,14 +11,18 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
       rel="stylesheet"
     />
-    <link rel="icon" href="/static/img/favicon.png" type="image/png" />
+    <link rel="icon" href="/static/img/favicon/favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/favicon/site.webmanifest">
   </head>
   <body>
     <div class="container">
       <header>
         <div class="logo">{{ app_name }}</div>
         <nav>
-          <a href="/docs" class="nav-link">Swagger UI</a>
+          <a href="/docs" class="nav-link" target="_blank">Swagger UI</a>
           <a href="{{ repository_url }}" class="nav-link" target="_blank">GitHub</a>
         </nav>
       </header>
@@ -36,7 +40,7 @@
           </div>
 
           <div class="status-card">
-            <div class="status-indicator online"></div>
+            <div class="status-indicator online">🟢</div>
             <span class="status-text">{{ message }}</span>
           </div>
 

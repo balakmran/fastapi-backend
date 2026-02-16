@@ -194,18 +194,18 @@ structure:
 - **Versioning:** Use Semantic Versioning (Major.Minor.Patch).
 - **Workflow:**
   1. Update `CHANGELOG.md` [Unreleased] section
-  2. Run `just bump part="<type>"` (patch/minor/major)
+  2. Run `just bump <type>` (patch/minor/major)
   3. Update `CHANGELOG.md` - move [Unreleased] to new version
   4. Commit changelog: `git commit -m "docs: update changelog for vX.Y.Z"`
   5. Merge to `main`
   6. Run `just tag` to create and push git tag
   7. GitHub Actions automatically creates release
 
-  | Run Command              | Bump Type | Result (Original: 0.2.0) |
-  | :----------------------- | :-------- | :----------------------- |
-  | `just bump part="patch"` | Patch     | `0.2.1`                  |
-  | `just bump part="minor"` | Minor     | `0.3.0`                  |
-  | `just bump part="major"` | Major     | `1.0.0`                  |
+  | Run Command       | Bump Type | Result (Original: 0.2.0) |
+  | :---------------- | :-------- | :----------------------- |
+  | `just bump`       | Patch     | `0.2.1`                  |
+  | `just bump minor` | Minor     | `0.3.0`                  |
+  | `just bump major` | Major     | `1.0.0`                  |
 
 - **Changelog:**
   - **Update Policy**: `CHANGELOG.md` MUST be updated after **every** meaningful

@@ -23,19 +23,15 @@ git clone https://github.com/balakmran/quoin-api.git
 cd quoin-api
 
 # 2. Setup Project
-# Use `just` to install dependencies and pre-commit hooks.
 just setup
 
 # 3. Start the Database
-# Start the PostgreSQL database container in the background.
 just db
 
 # 4. Apply Migrations
-# Run Alembic migrations to set up the database schema.
 just migrate-up
 
 # 5. Run the Server
-# Start the local development server with auto-reload enabled.
 just run
 ```
 
@@ -74,7 +70,7 @@ This confirms the application is running correctly. The page includes:
 5.  **Verify**: Run `just check`.
 6.  **Submit PR**: Open a Pull Request.
 
-### 💎 Coding Standards
+### Coding Standards
 
 We enforce strict coding standards to maintain a high-quality codebase.
 

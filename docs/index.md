@@ -4,39 +4,57 @@ title: Home
 
 # QuoinAPI
 
----
-
 [![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 
-**The architectural cornerstone for high-performance, scalable Python services** built with **FastAPI**,
-**SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
-type checking, structured logging, and OpenTelemetry observability.
+![QuoinAPI](assets/images/quoin-api-banner.png)
 
----
+> **The architectural cornerstone for high-performance, scalable Python services.**
 
-## 🚀 Key Features
+**QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation designed to serve as the structural cornerstone for modern Python backends. Built with **FastAPI**, **SQLModel**, and the **Astral stack** (uv, ruff, ty), it provides a battle-tested "Golden Path" for developers who prioritize architectural integrity, type safety, and observability.
 
-- **High Performance**: Async I/O with FastAPI and Pydantic.
-- **Type Safe**: 100% type-annotated, verified by `ty`.
-- **Observable**: Integrated OpenTelemetry traces and structured logging.
-- **Developer First**: Powered by `uv` for package management and `just` for
-  automation.
+## 🏗️ Key Highlights
 
----
+#### High-Performance Core
 
-## 🛠️ Tech Stack
+- **Async-first** patterns with FastAPI and async PostgreSQL via `asyncpg`
+- **Lightning-fast tooling** powered by `uv` for dependency management
+- **Optimized** for production workloads with connection pooling
 
-- **Core**: FastAPI, SQLModel, Pydantic Settings
-- **Database**: PostgreSQL, AsyncPG, Alembic
-- **Tooling**: uv, Ruff, Ty, Pytest
-- **Observability**: OpenTelemetry, Structlog
+#### Structural Integrity
+
+- **100% type-annotated** code verified by `ty` and strict linting via `ruff`
+- **Domain-driven design** with module-level exceptions and rich error context
+- **API versioning** with `/api/v1/` prefix for future-proof evolution
+
+#### Built-in Observability
+
+- **Integrated OpenTelemetry** for distributed tracing
+- **Structured logging** with Structlog for machine-readable logs
+- **Health checks** and readiness endpoints out of the box
+
+#### Architectural Efficiency
+
+- **Ready-to-use template** that eliminates boilerplate
+- **Environment-based configuration** with `.env` file selection
+- **Just-based automation** for common development tasks
+
+## 🛠 Tech Stack & Tools
+
+- **Framework:** FastAPI
+- **Database:** PostgreSQL (using `asyncpg` driver)
+- **ORM:** SQLModel (SQLAlchemy wrapper)
+- **Migrations:** Alembic
+- **Package Manager:** `uv` (Fast Python package installer)
+- **Task Runner:** `just`
+- **Linting/Formatting:** Ruff
+- **Type Checking:** ty (Static type checker)
+- **Testing:** Pytest, pytest-cov
+- **Observability:** OpenTelemetry, Structlog
+- **Documentation:** Zensical (MkDocs Material)
 
 Learn more about our [technology choices and design decisions →](architecture/design-decisions.md)
-
----
 
 ## ⚡️ Quick Start
 
@@ -59,16 +77,12 @@ Visit the API documentation at
 
 **Need help?** Check out the [Getting Started Guide →](guides/getting-started.md)
 
----
-
 ## 📸 Running Application
 
 ![QuoinAPI Home Page](assets/images/quoin-api-homepage.png)
 
 The application home page provides real-time health indicators and quick links
 to API documentation.
-
----
 
 ## ️ Architecture
 
@@ -88,8 +102,6 @@ graph TB
 
 Read the [full architecture documentation →](architecture/overview.md)
 
----
-
 ## 📂 Project Structure
 
 ```plaintext
@@ -104,9 +116,12 @@ Read the [full architecture documentation →](architecture/overview.md)
 │   │   ├── openapi.py            # OpenAPI configuration
 │   │   └── telemetry.py          # OpenTelemetry instrumentation
 │   ├── db/                       # Database connection & base models
+│   │   ├── session.py            # Database session
+│   │   └── base.py               # Base models
 │   ├── modules/
 │   │   ├── system/               # System health & status
 │   │   └── user/                 # User management module
+│   │       ├── exceptions.py     # Domain-specific exceptions
 │   │       ├── models.py         # SQLModel database tables
 │   │       ├── schemas.py        # Pydantic request/response models
 │   │       ├── repository.py     # Database access (CRUD)
@@ -114,6 +129,8 @@ Read the [full architecture documentation →](architecture/overview.md)
 │   │       └── routes.py         # FastAPI router endpoints
 │   ├── static/                   # Static assets
 │   ├── templates/                # Jinja2 templates
+│   │   └── index.html            # Home page
+│   ├── api.py                    # API Route structure
 │   └── main.py                   # Application entry point
 ├── tests/                        # Pytest test suite
 ├── alembic/                      # Database migrations
@@ -122,11 +139,10 @@ Read the [full architecture documentation →](architecture/overview.md)
 ├── .env.example                  # Environment variables template
 ├── docker-compose.yml            # Local dev environment
 ├── Dockerfile                    # Production Docker image
+├── AGENTS.md                     # AI Agent instructions
 ├── justfile                      # Task runner
 └── pyproject.toml                # Dependencies & config
 ```
-
----
 
 ## 📖 Documentation
 
@@ -137,22 +153,16 @@ Read the [full architecture documentation →](architecture/overview.md)
 | **🔌 [API Reference](api/overview.md)**         | Complete API documentation with core modules, user module, REST endpoints, and code examples                            |
 | **📋 [Project Info](project/contributing.md)**  | Contributing guide, changelog, license (MIT), and GitHub repository                                                     |
 
----
-
 ## 🤝 Contributing
 
 We welcome contributions! Please read our [Contributing Guide](project/contributing.md)
 to learn about our development process, coding standards, and how to submit pull
 requests.
 
----
-
 ## 📜 License
 
 This project is licensed under the **MIT License**. See the [LICENSE](project/license.md)
 for details.
-
----
 
 ## 🔗 Quick Links
 

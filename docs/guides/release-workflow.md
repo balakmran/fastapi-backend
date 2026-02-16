@@ -56,13 +56,13 @@ Increment the version number in `pyproject.toml` and `app/__init__.py`:
 
 ```bash
 # For a patch release (0.1.0 → 0.1.1)
-just bump part="patch"
+just bump
 
 # For a minor release (0.1.0 → 0.2.0)
-just bump part="minor"
+just bump minor
 
 # For a major release (0.1.0 → 1.0.0)
-just bump part="major"
+just bump major
 ```
 
 This command automatically:

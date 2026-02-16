@@ -1,6 +1,38 @@
 # Changelog
 
-## [0.4.0] - 2026-02-16
+## [Unreleased]
+
+### Added
+
+- **API Versioning**: Introduced `/api/v1/` prefix to all endpoints for future-proof API evolution.
+- **Module-Level Exceptions**: Added `app/modules/user/exceptions.py` and `SystemError` (in system module) for domain-specific error handling.
+- **Environment Configuration**: Added `Environment` enum and `.env.test`/`.env.production` support.
+- **Project Rename**: Officially renamed project from "FastAPI Backend" to **QuoinAPI** (pronounced "koyn").
+- **Architectural Branding**: Updated README and Metadata with "Structural Integrity", "High-Performance Core", and "Built-in Observability" pillars.
+
+### Changed
+
+- **Configuration**:
+  - Renamed environment variable prefix from `APP_` to `QUOIN_` (e.g., `QUOIN_ENV`, `QUOIN_DB_URL`).
+  - Enforced `QUOIN_ENV` (or fallback `ENV`) to select configuration files.
+  - Replaced `DEBUG` boolean with `LOG_LEVEL` string (default: "INFO").
+- **Error Handling**:
+  - Renamed `AppError` to `QuoinError` as the base exception class.
+  - Standardized error responses with `QuoinRequestValidationError` for Pydantic errors.
+  - Updated `exception_handlers.py` to use new exception hierarchy.
+- **Docker**:
+  - Renamed services and images to `quoin-api` and `quoin-api-docs`.
+  - Updated `docker-compose.yml` to use `QUOIN_ENV` and `QUOIN_POSTGRES_*` variables.
+- **Documentation**:
+  - Updated all guides to reflect `QuoinAPI` naming and `QUOIN_` configuration prefix.
+  - Updated branding assets and repository URLs to `balakmran/quoin-api`.
+
+### Removed
+
+- **Legacy Config**: Removed support for `APP_ENV` (use `QUOIN_ENV`).
+- **Legacy Naming**: Removed references to `fastapi-backend` in all documentation and config files.
+
+## [0.4.0] - 2026-02-15
 
 ### Added
 

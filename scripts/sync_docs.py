@@ -38,7 +38,7 @@ def sync_file(source: Path, dest: Path, adjust_paths: bool = False) -> None:
         adjust_paths: Whether to adjust image paths
     """
     if not source.exists():
-        print(f"⚠️  Source not found: {source}")
+        print(f"Source not found: {source}")
         return
 
     content = source.read_text()
@@ -48,7 +48,7 @@ def sync_file(source: Path, dest: Path, adjust_paths: bool = False) -> None:
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(content)
-    print(f"✅ Synced: {source.name} -> {dest.relative_to(Path.cwd())}")
+    print(f"Synced: {source.name} -> {dest.relative_to(Path.cwd())}")
 
 
 def main() -> None:
@@ -56,7 +56,7 @@ def main() -> None:
     root = Path(__file__).parent.parent
     docs_project = root / "docs" / "project"
 
-    print("🔄 Syncing project documentation files...\n")
+    print("Syncing project documentation files...\n")
 
     # Files to sync (source, dest, adjust_image_paths)
     files = [
@@ -72,7 +72,7 @@ def main() -> None:
     for source, dest, adjust_paths in files:
         sync_file(source, dest, adjust_paths)
 
-    print("\n✨ Documentation sync complete!")
+    print("\nDocumentation sync complete!")
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ nav = [
         { "Getting Started" = "guides/getting-started.md" },
         { "Configuration" = "guides/configuration.md" },
         { "Database Migrations" = "guides/database-migrations.md" },
+        { "API Structure" = "guides/api-structure.md" },
         { "Error Handling" = "guides/error-handling.md" },
         { "Testing" = "guides/testing.md" },
         { "Quality Checks" = "guides/quality-checks.md" },
@@ -28,7 +29,7 @@ nav = [
         { "Design Decisions" = "architecture/design-decisions.md" },
     ]},
     { "API Reference" = [
-        { "Overview" = "guides/api-overview.md" },
+        { "Overview" = "api/overview.md" },
         { "Core" = "api/core.md" },
         { "User" = "api/user.md" },
     ]},

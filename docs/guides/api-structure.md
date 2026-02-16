@@ -1,8 +1,27 @@
-# API Overview
+# API Structure
 
 This document provides an overview of the QuoinAPI API structure, versioning strategy, and key endpoints.
 
----
+## Router Structure
+
+The API is organized hierarchically in [`app/api.py`](https://github.com/balakmran/quoin-api/blob/main/app/api.py):
+
+```python
+from fastapi import APIRouter
+from app.modules.user import router as user_router
+from app.modules.system import router as system_router_root
+
+# Versioned API router
+v1_router = APIRouter()
+v1_router.include_router(user_router)
+
+# Top-level API router with version prefix
+api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(v1_router)
+
+# System router (no prefix)
+# Included separately at root level in main.py
+```
 
 ## API Versioning
 
@@ -45,26 +64,26 @@ Interactive API documentation is available (development only):
 
 ---
 
-## Router Structure
+## Versioning Strategy
 
-The API is organized hierarchically in [`app/api.py`](https://github.com/balakmran/quoin-api/blob/main/app/api.py):
+### When to Create a New Version
 
-```python
-from fastapi import APIRouter
-from app.modules.user import router as user_router
-from app.modules.system import router as system_router_root
+Create a new API version (e.g., `/api/v2/`) when making **breaking changes**:
 
-# Versioned API router
-v1_router = APIRouter()
-v1_router.include_router(user_router)
+- Removing or renaming fields
+- Changing response structure
+- Modifying endpoint URLs
+- Changing authentication methods
 
-# Top-level API router with version prefix
-api_router = APIRouter(prefix="/api/v1")
-api_router.include_router(v1_router)
+### Non-Breaking Changes
 
-# System router (no prefix)
-# Included separately at root level in main.py
-```
+The following changes **do not** require a new version:
+
+- Adding new optional fields
+- Adding new endpoints
+- Adding new query parameters (with defaults)
+- Improving error messages
+- Performance improvements
 
 ---
 
@@ -114,29 +133,6 @@ GET /health
   "status": "healthy"
 }
 ```
-
----
-
-## Versioning Strategy
-
-### When to Create a New Version
-
-Create a new API version (e.g., `/api/v2/`) when making **breaking changes**:
-
-- Removing or renaming fields
-- Changing response structure
-- Modifying endpoint URLs
-- Changing authentication methods
-
-### Non-Breaking Changes
-
-The following changes **do not** require a new version:
-
-- Adding new optional fields
-- Adding new endpoints
-- Adding new query parameters (with defaults)
-- Improving error messages
-- Performance improvements
 
 ---
 

@@ -37,7 +37,7 @@ async def root(request: Request) -> HTMLResponse:
 @router.get("/health", include_in_schema=False)
 async def health() -> dict[str, str]:
     """Health check endpoint."""
-    return {"status": "ok"}
+    return {"status": "healthy"}
 
 
 @router.get("/ready", include_in_schema=False)

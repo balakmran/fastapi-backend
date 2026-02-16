@@ -26,7 +26,7 @@ All application exceptions inherit from [`QuoinError`](https://github.com/balakm
 from app.core.exceptions import QuoinError
 
 class QuoinError(Exception):
-    \"\"\"Base exception for all Quoin application errors.\"\"\"
+    """Base exception for all Quoin application errors."""
 
     def __init__(
         self,
@@ -62,16 +62,16 @@ Each module defines domain-specific exceptions that inherit from core exceptions
 from app.core.exceptions import ConflictError, NotFoundError
 
 class UserNotFoundError(NotFoundError):
-    \"\"\"Raised when a user cannot be found.\"\"\"
+    """Raised when a user cannot be found."""
 
     def __init__(self, user_id: str) -> None:
-        super().__init__(message=f\"User with ID '{user_id}' not found\")
+        super().__init__(message=f"User with ID '{user_id}' not found")
 
 class DuplicateEmailError(ConflictError):
-    \"\"\"Raised when attempting to create a user with an existing email.\"\"\"
+    """Raised when attempting to create a user with an existing email."""
 
     def __init__(self, email: str) -> None:
-        super().__init__(message=f\"Email '{email}' is already registered\")
+        super().__init__(message=f"Email '{email}' is already registered")
 ```
 
 ### Benefits of Module-Level Exceptions
@@ -120,14 +120,14 @@ async def quoin_exception_handler(
     request: Request, exc: QuoinError
 ) -> Response:
     logger.warning(
-        \"quoin_error\",
+        "quoin_error",
         message=exc.message,
         status_code=exc.status_code,
         path=request.url.path,
     )
     return JSONResponse(
         status_code=exc.status_code,
-        content={\"detail\": exc.message},
+        content={"detail": exc.message},
         headers=exc.headers,
     )
 ```
@@ -139,13 +139,13 @@ async def validation_exception_handler(
     request: Request, exc: ValidationError
 ) -> Response:
     logger.warning(
-        \"validation_error\",
+        "validation_error",
         errors=exc.errors(),
         path=request.url.path,
     )
     return JSONResponse(
         status_code=422,
-        content={\"detail\": exc.errors()},
+        content={"detail": exc.errors()},
     )
 ```
 
@@ -166,7 +166,7 @@ All errors return a consistent JSON structure:
 
 ```json
 {
-  \"detail\": \"Email 'existing@example.com' is already registered\"
+  "detail": "Email 'existing@example.com' is already registered"
 }
 ```
 
@@ -175,13 +175,13 @@ Example API error response with rich context:
 ```bash
 POST /api/v1/users/
 {
-  \"email\": \"existing@example.com\",
-  \"full_name\": \"John Doe\"
+  "email": "existing@example.com",
+  "full_name": "John Doe"
 }
 
 # Response: 409 Conflict
 {
-  \"detail\": \"Email 'existing@example.com' is already registered\"
+  "detail": "Email 'existing@example.com' is already registered"
 }
 ```
 
@@ -196,19 +196,19 @@ For new modules, create an `exceptions.py` file with domain-specific errors:
 from app.core.exceptions import BadRequestError, NotFoundError
 
 class PaymentFailedError(BadRequestError):
-    \"\"\"Raised when payment processing fails.\"\"\"
+    """Raised when payment processing fails."""
 
     def __init__(self, payment_id: str, reason: str) -> None:
         super().__init__(
-            message=f\"Payment '{payment_id}' failed: {reason}\"
+            message=f"Payment '{payment_id}' failed: {reason}"
         )
 
 class InvoiceNotFoundError(NotFoundError):
-    \"\"\"Raised when an invoice cannot be found.\"\"\"
+    """Raised when an invoice cannot be found."""
 
     def __init__(self, invoice_id: str) -> None:
         super().__init__(
-            message=f\"Invoice with ID '{invoice_id}' not found\"
+            message=f"Invoice with ID '{invoice_id}' not found"
         )
 ```
 
@@ -234,12 +234,12 @@ All `QuoinError` exceptions are automatically logged with structured logging:
 
 ```json
 {
-  \"event\": \"quoin_error\",
-  \"message\": \"User with ID 'f47ac10b-58cc-4372-a567-0e02b2c3d479' not found\",
-  \"status_code\": 404,
-  \"path\": \"/api/v1/users/f47ac10b-58cc-4372-a567-0e02b2c3d479\",
-  \"timestamp\": \"2026-02-16T15:30:00.000000\",
-  \"level\": \"warning\"
+  "event": "quoin_error",
+  "message": "User with ID 'f47ac10b-58cc-4372-a567-0e02b2c3d479' not found",
+  "status_code": 404,
+  "path": "/api/v1/users/f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "timestamp": "2026-02-16T15:30:00.000000",
+  "level": "warning"
 }
 ```
 
@@ -252,18 +252,18 @@ FastAPI's built-in validation errors (from Pydantic) are handled automatically:
 ```bash
 POST /api/v1/users/
 {
-  \"email\": \"not-an-email\",
-  \"full_name\": \"John Doe\"
+    "email": "not-an-email",
+    "full_name": "John Doe"
 }
 
 # Response: 422 Unprocessable Entity
 {
-  \"detail\": [
-    {
-      \"type\": \"value_error\",
-      \"loc\": [\"body\", \"email\"],
-      \"msg\": \"value is not a valid email address\",
-      \"input\": \"not-an-email\"
+    "detail": [
+        {
+            "type": "value_error",
+            "loc": ["body", "email"],
+            "msg": "value is not a valid email address",
+            "input": "not-an-email"
     }
   ]
 }
@@ -303,7 +303,7 @@ async def test_get_user_not_found(user_service):
     with pytest.raises(UserNotFoundError) as exc_info:
         await user_service.get_user(uuid.uuid4())
 
-    assert \"not found\" in str(exc_info.value.message)
+    assert "not found" in str(exc_info.value.message)
     assert exc_info.value.status_code == 404
 ```
 
@@ -312,20 +312,20 @@ For integration tests, validate the HTTP response:
 ```python
 async def test_create_user_duplicate_email(client):
     # Create first user
-    await client.post(\"/api/v1/users/\", json={
-        \"email\": \"test@example.com\",
-        \"full_name\": \"Test User\"
+    await client.post("/api/v1/users/", json={
+        "email": "test@example.com",
+        "full_name": "Test User"
     })
 
     # Try to create duplicate
-    response = await client.post(\"/api/v1/users/\", json={
-        \"email\": \"test@example.com\",
-        \"full_name\": \"Another User\"
+    response = await client.post("/api/v1/users/", json={
+        "email": "test@example.com",
+        "full_name": "Another User"
     })
 
     assert response.status_code == 409
-    assert \"test@example.com\" in response.json()[\"detail\"]
-    assert \"already registered\" in response.json()[\"detail\"]
+    assert "test@example.com" in response.json()["detail"]
+    assert "already registered" in response.json()["detail"]
 ```
 
 ---

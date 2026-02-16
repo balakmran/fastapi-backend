@@ -51,7 +51,7 @@ Shared fixtures are defined in [`conftest.py`](https://github.com/balakmran/quoi
 ```python
 @pytest.fixture
 def app() -> FastAPI:
-    \"\"\"Create a test FastAPI application.\"\"\"
+    """Create a test FastAPI application."""
     return create_app()
 ```
 
@@ -60,6 +60,7 @@ def app() -> FastAPI:
 ```python
 @pytest.fixture
 def anyio_backend() -> str:
+    """Return the async runtime backend."""
     return "asyncio"
 ```
 
