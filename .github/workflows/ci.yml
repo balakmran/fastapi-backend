@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   quality:
@@ -27,11 +27,15 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-      ENV: dev
+      QUOIN_ENV: test
+      QUOIN_POSTGRES_HOST: localhost
+      QUOIN_POSTGRES_PORT: 5432
+      QUOIN_POSTGRES_USER: postgres
+      QUOIN_POSTGRES_PASSWORD: postgres
+      QUOIN_POSTGRES_DB: postgres
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -39,9 +43,9 @@ jobs:
           version: "latest"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version-file: "pyproject.toml"
+          python-version-file: ".python-version"
 
       - name: Install just
         uses: extractions/setup-just@v3
