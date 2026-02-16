@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from app.core import metadata
-from app.core.config import settings
+from app.core.config import Environment, settings
 
 
 class OpenAPIExternalDoc(TypedDict):
@@ -59,8 +59,8 @@ OPENAPI_PARAMETERS: OpenAPIParameters = {
     "summary": metadata.APP_DESCRIPTION,
     "version": metadata.VERSION,
     "description": inspect.cleandoc(metadata.APP_LONG_DESCRIPTION),
-    "docs_url": "/docs" if settings.APP_ENV == "dev" else None,
-    "redoc_url": "/redoc" if settings.APP_ENV == "dev" else None,
+    "docs_url": "/docs" if settings.ENV != Environment.production else None,
+    "redoc_url": "/redoc" if settings.ENV != Environment.production else None,
     "openapi_tags": APITag.metadata(),  # type: ignore
     "servers": None,
     "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},

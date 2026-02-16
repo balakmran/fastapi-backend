@@ -1,6 +1,6 @@
 import uuid
 
-from app.core.exceptions import ConflictError, NotFoundError
+from app.modules.user.exceptions import DuplicateEmailError, UserNotFoundError
 from app.modules.user.models import User
 from app.modules.user.repository import UserRepository
 from app.modules.user.schemas import UserCreate, UserUpdate
@@ -17,14 +17,14 @@ class UserService:
         """Create a new user."""
         existing_user = await self.repository.get_by_email(user_create.email)
         if existing_user:
-            raise ConflictError(message="Email already registered")
+            raise DuplicateEmailError(email=user_create.email)
         return await self.repository.create(user_create)
 
     async def get_user(self, user_id: uuid.UUID) -> User:
         """Get a user by ID."""
         user = await self.repository.get(user_id)
         if not user:
-            raise NotFoundError(message="User not found")
+            raise UserNotFoundError(user_id=str(user_id))
         return user
 
     async def list_users(self, skip: int = 0, limit: int = 100) -> list[User]:

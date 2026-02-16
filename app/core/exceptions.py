@@ -1,8 +1,12 @@
-from __future__ import annotations
+from collections.abc import Sequence
+from typing import Any, LiteralString, NotRequired, TypedDict
+
+from pydantic_core import ErrorDetails, InitErrorDetails, PydanticCustomError
+from pydantic_core import ValidationError as PydanticValidationError
 
 
-class AppError(Exception):
-    """Base class for application exceptions."""
+class QuoinError(Exception):
+    """Base exception for all Quoin application errors."""
 
     def __init__(
         self,
@@ -10,14 +14,49 @@ class AppError(Exception):
         status_code: int = 500,
         headers: dict[str, str] | None = None,
     ) -> None:
-        """Initialize AppError."""
+        """Initialize QuoinError."""
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.headers = headers
 
 
-class InternalServerError(AppError):
+class ValidationError(TypedDict):
+    """Pydantic validation error shape."""
+
+    loc: tuple[int | str, ...]
+    msg: LiteralString
+    type: LiteralString
+    input: Any
+    ctx: NotRequired[dict[str, Any]]
+    url: NotRequired[str]
+
+
+class QuoinRequestValidationError(QuoinError):
+    """Request validation error (wraps Pydantic ValidationError)."""
+
+    def __init__(self, errors: Sequence[ValidationError]) -> None:
+        """Initialize QuoinRequestValidationError."""
+        self._errors = errors
+
+    def errors(self) -> list[ErrorDetails]:
+        """Convert to Pydantic error format."""
+        pydantic_errors: list[InitErrorDetails] = []
+        for error in self._errors:
+            pydantic_errors.append(
+                {
+                    "type": PydanticCustomError(error["type"], error["msg"]),
+                    "loc": error["loc"],
+                    "input": error["input"],
+                }
+            )
+        pydantic_error = PydanticValidationError.from_exception_data(
+            self.__class__.__name__, pydantic_errors
+        )
+        return pydantic_error.errors()
+
+
+class InternalServerError(QuoinError):
     """Internal Server Error."""
 
     def __init__(
@@ -29,7 +68,7 @@ class InternalServerError(AppError):
         super().__init__(message, status_code=500, headers=headers)
 
 
-class NotFoundError(AppError):
+class NotFoundError(QuoinError):
     """Resource Not Found."""
 
     def __init__(
@@ -41,7 +80,7 @@ class NotFoundError(AppError):
         super().__init__(message, status_code=404, headers=headers)
 
 
-class ConflictError(AppError):
+class ConflictError(QuoinError):
     """Resource Conflict."""
 
     def __init__(
@@ -53,7 +92,7 @@ class ConflictError(AppError):
         super().__init__(message, status_code=409, headers=headers)
 
 
-class BadRequestError(AppError):
+class BadRequestError(QuoinError):
     """Bad Request."""
 
     def __init__(
@@ -65,7 +104,7 @@ class BadRequestError(AppError):
         super().__init__(message, status_code=400, headers=headers)
 
 
-class ForbiddenError(AppError):
+class ForbiddenError(QuoinError):
     """Forbidden."""
 
     def __init__(
@@ -75,13 +114,3 @@ class ForbiddenError(AppError):
     ) -> None:
         """Initialize ForbiddenError."""
         super().__init__(message, status_code=403, headers=headers)
-
-
-__all__ = [
-    "AppError",
-    "BadRequestError",
-    "ConflictError",
-    "ForbiddenError",
-    "InternalServerError",
-    "NotFoundError",
-]

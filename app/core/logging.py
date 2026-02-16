@@ -3,7 +3,7 @@ import sys
 
 import structlog
 
-from app.core.config import settings
+from app.core.config import Environment, settings
 
 
 def setup_logging() -> None:
@@ -18,7 +18,7 @@ def setup_logging() -> None:
         structlog.processors.TimeStamper(fmt="iso", utc=False),
     ]
 
-    if settings.APP_ENV == "prod":
+    if settings.ENV == Environment.production:
         processors = [
             # Only for prod (needs stdlib logger)
             structlog.stdlib.add_logger_name,
@@ -37,14 +37,14 @@ def setup_logging() -> None:
     structlog.configure(
         processors=processors,
         logger_factory=structlog.PrintLoggerFactory()
-        if settings.APP_ENV == "dev"
+        if settings.ENV == Environment.development
         else structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
 
     # Configure standard library logging for third-party libraries
-    if settings.APP_ENV != "dev":
+    if settings.ENV != Environment.development:
         # Only needed in production when we use LoggerFactory
         formatter = structlog.stdlib.ProcessorFormatter(
             foreign_pre_chain=shared_processors,

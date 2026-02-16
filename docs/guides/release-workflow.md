@@ -24,10 +24,6 @@ graph TD
     D --> E[Merge to main]
     E --> F[Create Tag<br/>just tag]
     F --> G[GitHub Release<br/>automatic]
-
-    style B fill:#26C6DA
-    style F fill:#26C6DA
-    style G fill:#66BB6A
 ```
 
 ---

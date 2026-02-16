@@ -2,11 +2,31 @@
 
 The application is configured using **environment variables** and **[Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)**. This ensures strict type validation for all configuration options.
 
-## Environment Variables
+## Environment-Based Configuration
 
-Configuration is loaded from a `.env` file in the project root.
+The application supports three environments with automatic `.env` file selection based on the `ENV` variable:
 
-### Setup
+| Environment | ENV Value               | Config File       | Use Case              |
+| :---------- | :---------------------- | :---------------- | :-------------------- |
+| Development | `development` (default) | `.env`            | Local development     |
+| Test        | `test`                  | `.env.test`       | Test suite, CI/CD     |
+| Production  | `production`            | `.env.production` | Production deployment |
+
+The environment is determined at startup from the `ENV` environment variable.
+
+## Environment Variable Prefix
+
+All application settings use the `QUOIN_` prefix for namespacing. This prevents conflicts with system or other application variables.
+
+```bash
+# Example: setting log level
+export QUOIN_LOG_LEVEL=DEBUG
+
+# Without prefix (won't work)
+export LOG_LEVEL=DEBUG  # ❌ Ignored
+```
+
+## Setup
 
 Copy the example configuration to create your local `.env` file:
 
@@ -14,53 +34,86 @@ Copy the example configuration to create your local `.env` file:
 cp .env.example .env
 ```
 
-### Key Settings
+### Creating Environment-Specific Files
 
-| Variable            | Description                     | Default     |
-| :------------------ | :------------------------------ | :---------- |
-| `APP_ENV`           | App environment (`dev`, `prod`) | `dev`       |
-| `OTEL_ENABLED`      | Enable OpenTelemetry            | `true`      |
-| `POSTGRES_HOST`     | PostgreSQL host                 | `localhost` |
-| `POSTGRES_PORT`     | PostgreSQL port                 | `5432`      |
-| `POSTGRES_USER`     | PostgreSQL username             | `postgres`  |
-| `POSTGRES_PASSWORD` | PostgreSQL password             | `postgres`  |
-| `POSTGRES_DB`       | PostgreSQL database name        | `app_db`    |
+Create `.env.test` for test-specific settings:
+
+```bash
+# .env.test
+QUOIN_ENV=test
+QUOIN_LOG_LEVEL=DEBUG
+QUOIN_OTEL_ENABLED=False
+QUOIN_POSTGRES_DB=test_db
+```
+
+Create `.env.production` for production settings (never commit this):
+
+```bash
+# .env.production
+QUOIN_ENV=production
+QUOIN_LOG_LEVEL=WARNING
+QUOIN_OTEL_ENABLED=True
+QUOIN_POSTGRES_HOST=your-prod-db-host
+# ... other production settings
+```
+
+## Key Settings
+
+| Variable                  | Description                                         | Default       |
+| :------------------------ | :-------------------------------------------------- | :------------ |
+| `QUOIN_ENV`               | Environment (`development`, `test`, `production`)   | `development` |
+| `QUOIN_LOG_LEVEL`         | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO`        |
+| `QUOIN_OTEL_ENABLED`      | Enable OpenTelemetry tracing                        | `true`        |
+| `QUOIN_POSTGRES_HOST`     | PostgreSQL host                                     | `localhost`   |
+| `QUOIN_POSTGRES_PORT`     | PostgreSQL port                                     | `5432`        |
+| `QUOIN_POSTGRES_USER`     | PostgreSQL username                                 | `postgres`    |
+| `QUOIN_POSTGRES_PASSWORD` | PostgreSQL password                                 | `postgres`    |
+| `QUOIN_POSTGRES_DB`       | PostgreSQL database name                            | `app_db`      |
 
 ## Core Settings Module
 
-All settings are defined in `app/core/config.py`. The `Settings` class defines the schema and validation rules.
+All settings are defined in [`app/core/config.py`](../../app/core/config.py). The `Settings` class defines the schema and validation rules.
 
 ```python
+from enum import StrEnum
 from pydantic import PostgresDsn, computed_field
 from pydantic_settings import BaseSettings
 
+class Environment(StrEnum):
+    """Application environment."""
+    development = "development"
+    test = "test"
+    production = "production"
+
 class Settings(BaseSettings):
-    APP_ENV: str = "dev"
+    model_config = SettingsConfigDict(
+        env_prefix="quoin_",
+        case_sensitive=False,
+        env_file=env_file,  # Automatically selected
+    )
+
+    ENV: Environment = Environment.development
+    LOG_LEVEL: str = "INFO"
     OTEL_ENABLED: bool = True
 
     # Database - constructed from individual POSTGRES_* vars
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "postgres"
     # ... other POSTGRES_* fields
 
     @computed_field
     @property
     def DATABASE_URL(self) -> PostgresDsn:
-        """Assemble the database URL."""
-        # ... constructed from POSTGRES_* fields
+        \"\"\"Assemble the database URL.\"\"\"
+        # Constructed from POSTGRES_* fields
 ```
 
 ## Database Configuration
 
-The database connection is managed in `app/db/session.py`. The async
-engine is created via `create_db_engine()` and stored on
-`app.state.engine` during the application lifespan. It uses `SQLModel`
-(a wrapper around SQLAlchemy) with the async `asyncpg` driver for high
-performance.
+The database connection is managed in [`app/db/session.py`](../../app/db/session.py). The async engine is created via `create_db_engine()` and stored on `app.state.engine` during the application lifespan. It uses `SQLModel` (a wrapper around SQLAlchemy) with the async `asyncpg` driver for high performance.
 
 - **Changes**: Never modify the database schema manually. Always change the `SQLModel` definition in Python.
-- **Migrations**: Use `just migrate-gen "message"` to generate migration scripts.
+- **Migrations**: Use `just migrate-gen \"message\"` to generate migration scripts.
 
 ---
 

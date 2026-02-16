@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api import api_router
+from app.api import api_router, system_router_root
 from app.core.exception_handlers import add_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middlewares import configure_middlewares
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router)
+    app.include_router(system_router_root)
 
     return app
 

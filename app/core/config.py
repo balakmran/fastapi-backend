@@ -1,17 +1,47 @@
+import os
+from enum import StrEnum
+
 from pydantic import PostgresDsn, computed_field
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Environment(StrEnum):
+    """Application environment."""
+
+    development = "development"
+    test = "test"
+    production = "production"
+
+
+# Resolve environment before Settings loads
+env = Environment(os.getenv("ENV", Environment.development))
+
+# Select env file based on environment
+match env:
+    case Environment.test:
+        env_file = ".env.test"
+    case Environment.production:
+        env_file = ".env.production"
+    case _:
+        env_file = ".env"
 
 
 class Settings(BaseSettings):
     """Application settings."""
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_ignore_empty=True, extra="ignore"
+        env_prefix="quoin_",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_file=env_file,
+        env_ignore_empty=True,
+        extra="allow",
     )
 
     # Application
-    APP_ENV: str = "dev"
+    ENV: Environment = Environment.development
+    LOG_LEVEL: str = "INFO"
     OTEL_ENABLED: bool = True
 
     # Database
@@ -43,5 +73,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-__all__ = ["Settings", "settings"]

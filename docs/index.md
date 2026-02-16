@@ -82,11 +82,6 @@ graph TB
 
     Service -->|Domain Exceptions| Handlers[Exception Handlers]
     Handlers -->|JSON Response| Client
-
-    style FastAPI fill:#26C6DA
-    style PostgreSQL fill:#42A5F5
-    style Service fill:#FF6B6B
-    style Repository fill:#66BB6A
 ```
 
 Read the [full architecture documentation →](architecture/overview.md)

@@ -1,8 +1,13 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import pytest
 import structlog
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
+from app.core.config import Environment
+from app.core.exception_handlers import validation_exception_handler
 from app.core.logging import setup_logging
 
 
@@ -27,7 +32,7 @@ def test_setup_logging() -> None:
 def test_setup_logging_prod() -> None:
     """Test setup_logging configuration in production."""
     with (
-        patch("app.core.logging.settings.APP_ENV", "prod"),
+        patch("app.core.logging.settings.ENV", Environment.production),
         patch("structlog.configure") as mock_configure,
     ):
         setup_logging()
@@ -44,7 +49,7 @@ def test_setup_logging_prod() -> None:
 def test_setup_logging_not_dev() -> None:
     """Test setup_logging stdlib configuration in non-dev environment."""
     with (
-        patch("app.core.logging.settings.APP_ENV", "prod"),
+        patch("app.core.logging.settings.ENV", Environment.production),
         patch("logging.getLogger") as mock_get_logger,
         patch("logging.StreamHandler"),
     ):
@@ -57,3 +62,24 @@ def test_setup_logging_not_dev() -> None:
         mock_root_logger.handlers.clear.assert_called_once()
         mock_root_logger.addHandler.assert_called_once()
         mock_root_logger.setLevel.assert_called_with(logging.INFO)
+
+
+@pytest.mark.asyncio
+async def test_validation_exception_handler() -> None:
+    """Test validation_exception_handler handles Pydantic errors."""
+    # Create a mock request
+    request = MagicMock()
+    request.url.path = "/test"
+
+    # Create a ValidationError
+    try:
+
+        class TestModel(BaseModel):
+            value: int
+
+        TestModel(value="not_an_int")  # type: ignore[arg-type]
+    except PydanticValidationError as exc:
+        response = await validation_exception_handler(request, exc)
+        assert response.status_code == 422  # noqa: PLR2004
+        body = response.body.decode()  # type: ignore[union-attr]
+        assert "detail" in body
