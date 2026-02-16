@@ -1,7 +1,7 @@
 # Design Decisions
 
 This document explains the key technology choices and architectural
-decisions made in the FastAPI Backend project, including the rationale
+decisions made in the QuoinAPI project, including the rationale
 behind each decision.
 
 ---
@@ -354,8 +354,8 @@ just ds    # Serve locally on localhost:8001
 ```toml
 # zensical.toml
 [project]
-site_name = "FastAPI Backend"
-site_url = "https://balakmran.github.io/fastapi-backend/"
+site_name = "QuoinAPI"
+site_url = "https://balakmran.github.io/quoin-api/"
 
 [project.theme]
 name = "modern"

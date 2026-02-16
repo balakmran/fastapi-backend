@@ -1,6 +1,6 @@
 # System Architecture
 
-This document provides a comprehensive overview of the FastAPI Backend
+This document provides a comprehensive overview of the QuoinAPI
 architecture, including component structure, data flow, and integration
 patterns.
 

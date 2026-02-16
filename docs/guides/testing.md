@@ -1,7 +1,7 @@
 # Testing
 
 This guide explains the testing philosophy, patterns, and best practices
-for the FastAPI Backend project.
+for the QuoinAPI project.
 
 ---
 
@@ -44,7 +44,7 @@ tests/
 
 ## Fixtures
 
-Shared fixtures are defined in [`conftest.py`](https://github.com/balakmran/fastapi-backend/blob/main/tests/conftest.py):
+Shared fixtures are defined in [`conftest.py`](https://github.com/balakmran/quoin-api/blob/main/tests/conftest.py):
 
 ### `app` — FastAPI Application
 
@@ -382,4 +382,4 @@ pytest --ff  # failed first
 
 - [Pytest Documentation](https://docs.pytest.org/)
 - [httpx Testing Guide](https://www.python-httpx.org/async/#calling-into-python-web-apps)
-- [tests/conftest.py](https://github.com/balakmran/fastapi-backend/blob/main/tests/conftest.py) — Shared fixtures
+- [tests/conftest.py](https://github.com/balakmran/quoin-api/blob/main/tests/conftest.py) — Shared fixtures

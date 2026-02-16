@@ -1,6 +1,6 @@
 # Observability
 
-This guide explains the observability stack in the FastAPI Backend,
+This guide explains the observability stack in the QuoinAPI,
 including structured logging with Structlog and distributed tracing
 with OpenTelemetry.
 
@@ -37,7 +37,7 @@ Quick comparison to understand when to use each tool:
 
 ### Configuration
 
-Logging is configured in [`app/core/logging.py`](https://github.com/balakmran/fastapi-backend/blob/main/app/core/logging.py)
+Logging is configured in [`app/core/logging.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/logging.py)
 and automatically set up when the application starts.
 
 ```python
@@ -149,7 +149,7 @@ All three log statements will automatically include `order_id` and
 
 ### Configuration
 
-OTEL is configured in [`app/core/telemetry.py`](https://github.com/balakmran/fastapi-backend/blob/main/app/core/telemetry.py)
+OTEL is configured in [`app/core/telemetry.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py)
 and automatically instruments FastAPI.
 
 ```python
@@ -356,5 +356,5 @@ root_logger.setLevel(logging.WARNING)  # Only warnings and errors
 
 - [Structlog Documentation](https://www.structlog.org/)
 - [OpenTelemetry Python Docs](https://opentelemetry.io/docs/languages/python/)
-- [app/core/logging.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/logging.py) — Logging configuration
-- [app/core/telemetry.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/telemetry.py) — OTEL configuration
+- [app/core/logging.py](https://github.com/balakmran/quoin-api/blob/main/app/core/logging.py) — Logging configuration
+- [app/core/telemetry.py](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py) — OTEL configuration

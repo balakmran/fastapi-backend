@@ -34,7 +34,7 @@ class User(SQLModel, table=True):
 
 - `email` (unique, indexed)
 
-**Source:** [app/modules/user/models.py](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/models.py)
+**Source:** [app/modules/user/models.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/models.py)
 
 ---
 
@@ -107,7 +107,7 @@ class UserRead(BaseModel):
 }
 ```
 
-**Source:** [app/modules/user/schemas.py](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/schemas.py)
+**Source:** [app/modules/user/schemas.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/schemas.py)
 
 ---
 
@@ -150,7 +150,7 @@ class UserRepository:
         ...
 ```
 
-**Source:** [app/modules/user/repository.py](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/repository.py)
+**Source:** [app/modules/user/repository.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/repository.py)
 
 ---
 
@@ -208,7 +208,7 @@ class UserService:
         await self.repository.delete(user)
 ```
 
-**Source:** [app/modules/user/service.py](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/service.py)
+**Source:** [app/modules/user/service.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/service.py)
 
 ---
 
@@ -319,7 +319,7 @@ Delete a user.
 curl -X DELETE http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000
 ```
 
-**Source:** [app/modules/user/routes.py](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/routes.py)
+**Source:** [app/modules/user/routes.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/routes.py)
 
 ---
 

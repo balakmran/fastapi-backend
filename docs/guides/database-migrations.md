@@ -102,7 +102,7 @@ git commit -m "feat(user): add phone field to user model"
 
 ## Alembic Commands
 
-All commands are wrapped in the [`justfile`](https://github.com/balakmran/fastapi-backend/blob/main/justfile):
+All commands are wrapped in the [`justfile`](https://github.com/balakmran/quoin-api/blob/main/justfile):
 
 | Command                  | Alembic Equivalent                         | Description                  |
 | :----------------------- | :----------------------------------------- | :--------------------------- |
@@ -116,8 +116,8 @@ All commands are wrapped in the [`justfile`](https://github.com/balakmran/fastap
 
 ## Configuration
 
-Alembic configuration is stored in [`alembic.ini`](https://github.com/balakmran/fastapi-backend/blob/main/alembic.ini)
-and [`alembic/env.py`](https://github.com/balakmran/fastapi-backend/blob/main/alembic/env.py).
+Alembic configuration is stored in [`alembic.ini`](https://github.com/balakmran/quoin-api/blob/main/alembic.ini)
+and [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py).
 
 ### Database URL
 
@@ -289,7 +289,7 @@ Common causes:
 2. **Different driver** between runtime and migrations (asyncpg vs psycopg)
 3. **SQLModel metadata not set** as target_metadata
 
-**Solution**: Add import to [`alembic/env.py`](https://github.com/balakmran/fastapi-backend/blob/main/alembic/env.py):
+**Solution**: Add import to [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py):
 
 ```python
 from app.modules.user.models import User
@@ -315,4 +315,4 @@ from app.modules.product.models import Product  # Add new models here
 
 - [Alembic Documentation](https://alembic.sqlalchemy.org/)
 - [SQLModel Documentation](https://sqlmodel.tiangolo.com/)
-- [alembic/env.py](https://github.com/balakmran/fastapi-backend/blob/main/alembic/env.py) — Migration configuration
+- [alembic/env.py](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py) — Migration configuration

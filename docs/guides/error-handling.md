@@ -1,6 +1,6 @@
 # Error Handling
 
-This guide explains the error handling architecture in the FastAPI Backend, including custom domain exceptions, module-level exceptions, global exception handlers, and best practices for error management.
+This guide explains the error handling architecture in the QuoinAPI, including custom domain exceptions, module-level exceptions, global exception handlers, and best practices for error management.
 
 ---
 
@@ -20,7 +20,7 @@ graph LR
 
 ## Exception Hierarchy
 
-All application exceptions inherit from [`QuoinError`](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exceptions.py):
+All application exceptions inherit from [`QuoinError`](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py):
 
 ```python
 from app.core.exceptions import QuoinError
@@ -113,7 +113,7 @@ class UserService:
 
 ## Global Exception Handlers
 
-The [`quoin_exception_handler`](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exception_handlers.py) automatically converts `QuoinError` exceptions to JSON responses:
+The [`quoin_exception_handler`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) automatically converts `QuoinError` exceptions to JSON responses:
 
 ```python
 async def quoin_exception_handler(
@@ -132,7 +132,7 @@ async def quoin_exception_handler(
     )
 ```
 
-The [`validation_exception_handler`](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exception_handlers.py) handles Pydantic validation errors:
+The [`validation_exception_handler`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) handles Pydantic validation errors:
 
 ```python
 async def validation_exception_handler(
@@ -149,7 +149,7 @@ async def validation_exception_handler(
     )
 ```
 
-These handlers are registered in [`main.py`](https://github.com/balakmran/fastapi-backend/blob/main/app/main.py):
+These handlers are registered in [`main.py`](https://github.com/balakmran/quoin-api/blob/main/app/main.py):
 
 ```python
 from app.core.exception_handlers import add_exception_handlers
@@ -332,7 +332,7 @@ async def test_create_user_duplicate_email(client):
 
 ## See Also
 
-- [Core Exceptions](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exceptions.py) — Source code
-- [Exception Handlers](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exception_handlers.py) — Handler implementation
-- [User Module Exceptions](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/exceptions.py) — Example module exceptions
-- [User Service Example](https://github.com/balakmran/fastapi-backend/blob/main/app/modules/user/service.py) — Real-world usage
+- [Core Exceptions](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py) — Source code
+- [Exception Handlers](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) — Handler implementation
+- [User Module Exceptions](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/exceptions.py) — Example module exceptions
+- [User Service Example](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/service.py) — Real-world usage

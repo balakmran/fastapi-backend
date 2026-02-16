@@ -1,6 +1,6 @@
 # Contributing Guide
 
-Thank you for your interest in contributing to the FastAPI Backend project! This
+Thank you for your interest in contributing to the QuoinAPI project! This
 guide will help you set up your development environment and understand the
 project structure.
 
@@ -19,8 +19,8 @@ Ensure you have the following tools installed:
 
 ```bash
 # 1. Clone the Repository
-git clone https://github.com/balakmran/fastapi-backend.git
-cd fastapi-backend
+git clone https://github.com/balakmran/quoin-api.git
+cd quoin-api
 
 # 2. Setup Project
 # Use `just` to install dependencies and pre-commit hooks.
@@ -43,7 +43,7 @@ just run
 
 After running the server, you can visit [http://127.0.0.1:8000](http://127.0.0.1:8000) to see the application's home page:
 
-![FastAPI Backend Home Page](./docs/assets/images/fastapi-backend-homepage.png)
+![QuoinAPI Home Page](./docs/assets/images/quoin-api-homepage.png)
 
 This confirms the application is running correctly. The page includes:
 

@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to the **FastAPI Backend** project! This guide will help you set up your development environment and get the application running locally.
+Welcome to the **QuoinAPI** project! This guide will help you set up your development environment and get the application running locally.
 
 ## 🛠️ Prerequisites
 
@@ -18,8 +18,8 @@ Follow these steps to get up and running in minutes.
 
 ```bash
 # 1. Clone the Repository
-git clone https://github.com/balakmran/fastapi-backend.git
-cd fastapi-backend
+git clone https://github.com/balakmran/quoin-api.git
+cd quoin-api
 
 # 2. Setup Project
 # Use `just` to install dependencies and pre-commit hooks.
@@ -47,7 +47,7 @@ The application will be available at [http://127.0.0.1:8000](http://127.0.0.1:80
 
 When you visit [http://127.0.0.1:8000](http://127.0.0.1:8000), you'll see the application's home page:
 
-![FastAPI Backend Home Page](../assets/images/fastapi-backend-homepage.png)
+![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
 
 This confirms the application is running correctly. The page includes:
 

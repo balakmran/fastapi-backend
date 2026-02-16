@@ -1,14 +1,14 @@
 [project]
-site_name = "FastAPI Backend"
-site_url = "https://balakmran.github.io/fastapi-backend/"
-site_description = "High-Performance, Scalable API Foundation"
+site_name = "QuoinAPI"
+site_url = "https://balakmran.github.io/quoin-api/"
+site_description = "The architectural cornerstone for high-performance, scalable Python services"
 site_author = "Balakumaran Manoharan"
 copyright = "&copy; 2026 Balakumaran Manoharan"
 docs_dir = "docs"
 site_dir = "site"
 use_directory_urls = true
-repo_url = "https://github.com/balakmran/fastapi-backend"
-repo_name = "balakmran/fastapi-backend"
+repo_url = "https://github.com/balakmran/quoin-api"
+repo_name = "balakmran/quoin-api"
 nav = [
     { "Home" = "index.md" },
     { "Guides" = [

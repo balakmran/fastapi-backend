@@ -1,6 +1,6 @@
 # API Reference
 
-This section provides detailed API documentation for the FastAPI Backend,
+This section provides detailed API documentation for the QuoinAPI,
 automatically generated from the source code.
 
 ---

@@ -1,6 +1,6 @@
 services:
   api:
-    image: fastapi-backend:${VERSION:-latest}
+    image: quoin-api:${VERSION:-latest}
     build: .
     command: fastapi dev app/main.py --host 0.0.0.0 --port 8000
     volumes:

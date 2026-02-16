@@ -1,7 +1,7 @@
 [project]
-name = "fastapi-backend"
+name = "quoin-api"
 version = "0.4.0"
-description = "High-Performance, Scalable API Foundation"
+description = "The architectural cornerstone for high-performance, scalable Python services"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/balakmran/fastapi-backend"
-Documentation = "https://balakmran.github.io/fastapi-backend/"
+Repository = "https://github.com/balakmran/quoin-api"
+Documentation = "https://balakmran.github.io/quoin-api/"
 
 [dependency-groups]
 dev = [

@@ -1,6 +1,6 @@
 # Deployment
 
-This guide covers how to deploy the FastAPI Backend application using Docker.
+This guide covers how to deploy the QuoinAPI application using Docker.
 
 ## 🐳 Docker Deployment
 
@@ -44,7 +44,7 @@ just down
 Build the Docker image manually for production:
 
 ```bash
-docker build -t fastapi-backend:latest .
+docker build -t quoin-api:latest .
 ```
 
 The `Dockerfile` is optimized for production with:
@@ -76,11 +76,11 @@ docker run -d \
 
 # Run Application
 docker run -d \
-  --name fastapi-backend \
+  --name quoin-api \
   --link postgres:db \
   -p 8000:8000 \
   -e POSTGRES_HOST=db \
-  fastapi-backend:latest
+  quoin-api:latest
 ```
 
 ---
@@ -162,4 +162,4 @@ Use this endpoint for:
 - [Release Workflow](release-workflow.md) — Version management and tagging
 - [Observability](observability.md) — Setting up logs and traces
 - [Troubleshooting](troubleshooting.md) — Common deployment issues
-- [Dockerfile](https://github.com/balakmran/fastapi-backend/blob/main/Dockerfile) — Production image configuration
+- [Dockerfile](https://github.com/balakmran/quoin-api/blob/main/Dockerfile) — Production image configuration

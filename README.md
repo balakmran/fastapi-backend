@@ -1,21 +1,39 @@
-# FastAPI Backend
+# QuoinAPI
 
-[![CI](https://github.com/balakmran/fastapi-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/fastapi-backend/actions/workflows/ci.yml)
+[![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 
-**High-Performance, Scalable API Foundation** built with **FastAPI**,
-**SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
-type checking, structured logging, and OpenTelemetry observability.
+**The architectural cornerstone for high-performance, scalable Python services.**
 
-## 🚀 Key Features
+QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation designed to serve as the structural cornerstone for modern Python backends. Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty), it provides a battle-tested "Golden Path" for developers who prioritize architectural integrity, type safety, and observability.
 
-- **High Performance**: Async I/O with FastAPI and Pydantic.
-- **Type Safe**: 100% type-annotated, verified by `ty`.
-- **Observable**: integrated OpenTelemetry traces and structured logging.
-- **Developer First**: Powered by `uv` for package management and `just` for
-  automation.
+## 🏗️ Key Highlights
+
+### Structural Integrity
+
+- **100% type-annotated** code verified by `ty` and strict linting via `ruff`
+- **Domain-driven design** with module-level exceptions and rich error context
+- **API versioning** with `/api/v1/` prefix for future-proof evolution
+
+### High-Performance Core
+
+- **Async-first** patterns with FastAPI and async PostgreSQL via `asyncpg`
+- **Lightning-fast tooling** powered by `uv` for dependency management
+- **Optimized** for production workloads with connection pooling
+
+### Built-in Observability
+
+- **Integrated OpenTelemetry** for distributed tracing
+- **Structured logging** with Structlog for machine-readable logs
+- **Health checks** and readiness endpoints out of the box
+
+### Architectural Efficiency
+
+- **Ready-to-use template** that eliminates boilerplate
+- **Environment-based configuration** with `.env` file selection
+- **Just-based automation** for common development tasks
 
 ## 🛠️ Tech Stack
 

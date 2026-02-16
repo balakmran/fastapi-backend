@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and their solutions for the FastAPI Backend project.
+Common issues and their solutions for the QuoinAPI project.
 
 ---
 

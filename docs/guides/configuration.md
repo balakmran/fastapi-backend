@@ -120,5 +120,5 @@ The database connection is managed in [`app/db/session.py`](../../app/db/session
 ## See Also
 
 - [Database Migrations Guide](database-migrations.md) — Managing schema changes
-- [.env.example](https://github.com/balakmran/fastapi-backend/blob/main/.env.example) — Environment variables template
-- [app/core/config.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/config.py) — Settings module
+- [.env.example](https://github.com/balakmran/quoin-api/blob/main/.env.example) — Environment variables template
+- [app/core/config.py](https://github.com/balakmran/quoin-api/blob/main/app/core/config.py) — Settings module

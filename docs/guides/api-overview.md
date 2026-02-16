@@ -1,6 +1,6 @@
 # API Overview
 
-This document provides an overview of the FastAPI Backend API structure, versioning strategy, and key endpoints.
+This document provides an overview of the QuoinAPI API structure, versioning strategy, and key endpoints.
 
 ---
 
@@ -47,7 +47,7 @@ Interactive API documentation is available (development only):
 
 ## Router Structure
 
-The API is organized hierarchically in [`app/api.py`](https://github.com/balakmran/fastapi-backend/blob/main/app/api.py):
+The API is organized hierarchically in [`app/api.py`](https://github.com/balakmran/quoin-api/blob/main/app/api.py):
 
 ```python
 from fastapi import APIRouter
@@ -142,7 +142,7 @@ The following changes **do not** require a new version:
 
 ## See Also
 
-- [app/api.py](https://github.com/balakmran/fastapi-backend/blob/main/app/api.py) — API router configuration
-- [app/main.py](https://github.com/balakmran/fastapi-backend/blob/main/app/main.py) — Application entry point
+- [app/api.py](https://github.com/balakmran/quoin-api/blob/main/app/api.py) — API router configuration
+- [app/main.py](https://github.com/balakmran/quoin-api/blob/main/app/main.py) — Application entry point
 - [Error Handling](error-handling.md) — API error responses
 - [Testing Guide](testing.md) — API integration tests

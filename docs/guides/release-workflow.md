@@ -126,7 +126,7 @@ The GitHub Actions workflow automatically:
 - Attaches build artifacts (if configured)
 
 View releases at:
-[https://github.com/balakmran/fastapi-backend/releases](https://github.com/balakmran/fastapi-backend/releases)
+[https://github.com/balakmran/quoin-api/releases](https://github.com/balakmran/quoin-api/releases)
 
 ---
 
@@ -223,4 +223,4 @@ Mark as "Pre-release" in GitHub when creating the release.
 - [Deployment Guide](deployment.md) — Deploying releases to production
 - [Conventional Commits](https://www.conventionalcommits.org/) — Commit message format
 - [Semantic Versioning](https://semver.org/) — Version numbering scheme
-- [justfile](https://github.com/balakmran/fastapi-backend/blob/main/justfile) — Automation commands
+- [justfile](https://github.com/balakmran/quoin-api/blob/main/justfile) — Automation commands

@@ -2,14 +2,16 @@
 title: Home
 ---
 
-# FastAPI Backend
+# QuoinAPI
 
-[![CI](https://github.com/balakmran/fastapi-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/fastapi-backend/actions/workflows/ci.yml)
+---
+
+[![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 
-**High-Performance, Scalable API Foundation** built with **FastAPI**,
+**The architectural cornerstone for high-performance, scalable Python services** built with **FastAPI**,
 **SQLModel**, and **PostgreSQL**. Features a production-ready stack with strict
 type checking, structured logging, and OpenTelemetry observability.
 
@@ -61,7 +63,7 @@ Visit the API documentation at
 
 ## 📸 Running Application
 
-![FastAPI Backend Home Page](assets/images/fastapi-backend-homepage.png)
+![QuoinAPI Home Page](assets/images/quoin-api-homepage.png)
 
 The application home page provides real-time health indicators and quick links
 to API documentation.
@@ -154,7 +156,7 @@ for details.
 
 ## 🔗 Quick Links
 
-- **GitHub Repository**: [balakmran/fastapi-backend](https://github.com/balakmran/fastapi-backend)
+- **GitHub Repository**: [balakmran/quoin-api](https://github.com/balakmran/quoin-api)
 - **API Docs (Swagger)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **API Docs (ReDoc)**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 - **Changelog**: [View version history](project/changelog.md)

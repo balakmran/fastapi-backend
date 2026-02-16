@@ -77,7 +77,7 @@ raise ForbiddenError(message="Admin access required")
 
 **Note:** FastAPI + Pydantic automatically handle request validation and return 422 responses for invalid data. You don't need a custom `ValidationError` exception.
 
-**Source:** [app/core/exceptions.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exceptions.py)
+**Source:** [app/core/exceptions.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py)
 
 ---
 
@@ -124,7 +124,7 @@ database_url = settings.DATABASE_URL
 is_production = settings.APP_ENV == "prod"
 ```
 
-**Source:** [app/core/config.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/config.py)
+**Source:** [app/core/config.py](https://github.com/balakmran/quoin-api/blob/main/app/core/config.py)
 
 ---
 
@@ -156,7 +156,7 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, app_exception_handler)
 ```
 
-**Source:** [app/core/exception_handlers.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/exception_handlers.py)
+**Source:** [app/core/exception_handlers.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py)
 
 ---
 
@@ -176,7 +176,7 @@ def configure_middlewares(app: FastAPI) -> None:
     )
 ```
 
-**Source:** [app/core/middlewares.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/middlewares.py)
+**Source:** [app/core/middlewares.py](https://github.com/balakmran/quoin-api/blob/main/app/core/middlewares.py)
 
 ---
 
@@ -198,7 +198,7 @@ def setup_logging() -> None:
     )
 ```
 
-**Source:** [app/core/logging.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/logging.py)
+**Source:** [app/core/logging.py](https://github.com/balakmran/quoin-api/blob/main/app/core/logging.py)
 
 ---
 
@@ -217,7 +217,7 @@ def setup_opentelemetry(app: FastAPI) -> None:
     SQLAlchemyInstrumentor().instrument()
 ```
 
-**Source:** [app/core/telemetry.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/telemetry.py)
+**Source:** [app/core/telemetry.py](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py)
 
 ---
 
@@ -234,7 +234,7 @@ from app.core.metadata import (
 )
 ```
 
-**Source:** [app/core/metadata.py](https://github.com/balakmran/fastapi-backend/blob/main/app/core/metadata.py)
+**Source:** [app/core/metadata.py](https://github.com/balakmran/quoin-api/blob/main/app/core/metadata.py)
 
 ---
 
