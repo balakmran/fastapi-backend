@@ -14,12 +14,13 @@ def test_environment_enum_values() -> None:
 
 def test_settings_defaults() -> None:
     """Test Settings default values."""
-    settings = Settings()
-    assert settings.ENV == Environment.development
-    assert settings.LOG_LEVEL == "INFO"
-    assert settings.OTEL_ENABLED is True
-    assert settings.POSTGRES_HOST == "localhost"
-    assert settings.POSTGRES_PORT == 5432  # noqa: PLR2004
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)  # type: ignore[call-arg]
+        assert settings.ENV == Environment.development
+        assert settings.LOG_LEVEL == "INFO"
+        assert settings.OTEL_ENABLED is True
+        assert settings.POSTGRES_HOST == "localhost"
+        assert settings.POSTGRES_PORT == 5432  # noqa: PLR2004
 
 
 def test_settings_with_env_prefix() -> None:
@@ -41,7 +42,7 @@ def test_settings_with_env_prefix() -> None:
 
 def test_env_file_selection_test() -> None:
     """Test that .env.test is selected when ENV=test."""
-    with patch.dict(os.environ, {"ENV": "test"}, clear=True):
+    with patch.dict(os.environ, {"QUOIN_ENV": "test"}, clear=True):
         # Re-import to trigger env file selection logic
         from app.core import config  # noqa: PLC0415
 
@@ -52,7 +53,7 @@ def test_env_file_selection_test() -> None:
 
 def test_env_file_selection_production() -> None:
     """Test that .env.production is selected when ENV=production."""
-    with patch.dict(os.environ, {"ENV": "production"}, clear=True):
+    with patch.dict(os.environ, {"QUOIN_ENV": "production"}, clear=True):
         # Re-import to trigger env file selection logic
         from app.core import config  # noqa: PLC0415
 
@@ -63,7 +64,7 @@ def test_env_file_selection_production() -> None:
 
 def test_env_file_selection_default() -> None:
     """Test that .env is selected for development."""
-    with patch.dict(os.environ, {"ENV": "development"}, clear=True):
+    with patch.dict(os.environ, {"QUOIN_ENV": "development"}, clear=True):
         # Re-import to trigger env file selection logic
         from app.core import config  # noqa: PLC0415
 

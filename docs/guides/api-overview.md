@@ -55,11 +55,11 @@ from app.modules.user import router as user_router
 from app.modules.system import router as system_router_root
 
 # Versioned API router
-v1_router = APIRouter(prefix=\"/v1\")
+v1_router = APIRouter()
 v1_router.include_router(user_router)
 
-# Main API router with version prefix
-api_router = APIRouter(prefix=\"/api\")
+# Top-level API router with version prefix
+api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(v1_router)
 
 # System router (no prefix)
@@ -77,16 +77,16 @@ POST /api/v1/users/
 Content-Type: application/json
 
 {
-  \"email\": \"user@example.com\",
-  \"full_name\": \"John Doe\"
+  "email": "user@example.com",
+  "full_name": "John Doe"
 }
 
 # Response: 201 Created
 {
-  \"id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\",
-  \"email\": \"user@example.com\",
-  \"full_name\": \"John Doe\",
-  \"created_at\": \"2026-02-16T15:30:00.000000\"
+  "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "created_at": "2026-02-16T15:30:00.000000"
 }
 ```
 
@@ -97,10 +97,10 @@ GET /api/v1/users/f47ac10b-58cc-4372-a567-0e02b2c3d479
 
 # Response: 200 OK
 {
-  \"id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\",
-  \"email\": \"user@example.com\",
-  \"full_name\": \"John Doe\",
-  \"created_at\": \"2026-02-16T15:30:00.000000\"
+  "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "created_at": "2026-02-16T15:30:00.000000"
 }
 ```
 
@@ -111,7 +111,7 @@ GET /health
 
 # Response: 200 OK
 {
-  \"status\": \"healthy\"
+  "status": "healthy"
 }
 ```
 
