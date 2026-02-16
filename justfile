@@ -125,7 +125,9 @@ check:
 
 # Build documentation
 docs-build:
-    uv run python -m zensical build --clean
+    @echo "📄 Syncing project files..."
+    @uv run python scripts/sync_docs.py
+    PYTHONPATH=. uv run python -m zensical build --clean
 
 # Serve documentation locally
 docs-serve:

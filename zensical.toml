@@ -14,7 +14,28 @@ nav = [
     { "Guides" = [
         { "Getting Started" = "guides/getting-started.md" },
         { "Configuration" = "guides/configuration.md" },
-        { "Deployment & Workflow" = "guides/deployment.md" },
+        { "Database Migrations" = "guides/database-migrations.md" },
+        { "Error Handling" = "guides/error-handling.md" },
+        { "Testing" = "guides/testing.md" },
+        { "Quality Checks" = "guides/quality-checks.md" },
+        { "Observability" = "guides/observability.md" },
+        { "Deployment" = "guides/deployment.md" },
+        { "Release Workflow" = "guides/release-workflow.md" },
+        { "Troubleshooting" = "guides/troubleshooting.md" },
+    ]},
+    { "Architecture" = [
+        { "System Overview" = "architecture/overview.md" },
+        { "Design Decisions" = "architecture/design-decisions.md" },
+    ]},
+    { "API Reference" = [
+        { "Overview" = "api/overview.md" },
+        { "Core" = "api/core.md" },
+        { "User" = "api/user.md" },
+    ]},
+    { "Project" = [
+        { "Contributing" = "project/contributing.md" },
+        { "Changelog" = "project/changelog.md" },
+        { "License" = "project/license.md" },
     ]},
 ]
 extra_css = ["stylesheets/extra.css"]
@@ -29,6 +50,10 @@ features = [
     "navigation.tracking",
     "navigation.path",
     "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.instant.progress",
+    "navigation.expand",
     "toc.follow",
     "content.code.copy",
     "search.suggest",
@@ -81,11 +106,21 @@ extensions = [
     "pymdownx.snippets",
     "admonition",
     "pymdownx.details",
-    "pymdownx.tabbed",
+    { "pymdownx.tabbed" = { alternate_style = true } },
 ]
 
 [project.plugins]
-list = [
-    "search",
-    { "mkdocstrings" = { handlers = { python = { paths = ["."], options = { docstring_style = "google" } } } } },
-]
+list = ["search", "mkdocstrings"]
+
+[project.plugins.mkdocstrings.handlers.python]
+inventories = ["https://docs.python.org/3/objects.inv"]
+paths = ["."]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+inherited_members = true
+show_source = false
+show_root_heading = true
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+members_order = "source"
