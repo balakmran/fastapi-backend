@@ -102,6 +102,7 @@ The controls the template does provide, and how they are configured:
   anchors and fail-fast, JWKS refresh backoff, and credential
   redaction.
 - [Dependency Scanning](docs/guides/dependency-scanning.md) —
+  `just audit` for on-demand CVE scanning of the locked tree;
   Dependabot and GitHub-native secret scanning; SHA-pinned Actions;
   digest-pinned build tooling.
 - [Authentication guide](docs/guides/authentication.md) — OIDC/JWT

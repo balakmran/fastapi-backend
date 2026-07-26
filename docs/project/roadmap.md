@@ -60,7 +60,6 @@ not "it would be nice to have".
 
 | Status | Feature | Why deferred |
 | :----- | :------ | :----------- |
-| 💡 | **Supply chain scanning stack (pip-audit, Trivy, Semgrep, gitleaks)** | GitHub's free built-ins (Dependabot + secret scanning + optionally CodeQL) cover the same ground with zero CI overhead, and enterprise forks will swap the stack out for Snyk/Black Duck/GHAS anyway. Shipping a 4-tool default is opinion-as-debt. The `v0.8` Dependabot-only item is the floor. |
 | 💡 | **Rate limiting (`slowapi`)** | In-memory backend is dev-only and shared-state in prod requires Redis (also backlog). Most production deployers rate-limit at the edge (NGINX, Cloudflare, API gateway, ALB); in-app rate limiting is niche enough to demand-gate. |
 | 💡 | **ETag / `If-Match` optimistic concurrency** | Genuinely useful for some apps but most CRUD APIs don't need it. Pattern can be documented in `docs/guides/` without code in the template. |
 | 💡 | **Idempotency keys (DB-backed store)** | Significant scope (replay logic, TTL semantics, key collision handling). Retry-safe idempotent verbs (`PUT`, `DELETE`) + client-supplied request IDs cover most cases. Build when actually needed. |
