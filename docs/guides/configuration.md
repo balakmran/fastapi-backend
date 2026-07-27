@@ -120,6 +120,15 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_HTTP_TIMEOUT_SECONDS` | Outbound request timeout in seconds (all phases)   | `10.0`                                              |
 | `QUOIN_HTTP_RETRY_ATTEMPTS`  | Total attempts per outbound call (`1` = no retry)  | `3`                                                 |
 
+The five `QUOIN_OAUTH_*` settings are deliberately not repeated here —
+they only make sense alongside the token-validation rules they drive.
+See the [Authentication guide](authentication.md#configuration) for
+`QUOIN_OAUTH_JWKS_URI`, `QUOIN_OAUTH_ISSUER`, `QUOIN_OAUTH_AUDIENCE`,
+`QUOIN_OAUTH_ROLES_CLAIM`, and
+`QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS`. All three trust anchors are
+**required in production** — `create_app()` refuses to boot without
+them.
+
 Finer backoff and circuit-breaker tuning are module constants in
 [`app/http/client.py`](../../app/http/client.py) rather than settings; the
 connection pool uses httpx defaults. See the

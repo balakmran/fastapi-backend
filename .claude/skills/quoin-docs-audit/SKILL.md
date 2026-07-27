@@ -47,15 +47,13 @@ root source, not the synced copy.
    `pyproject.toml` (`requires-python`) and the workflow files. (This overlaps
    with `quoin-deps-upgrade`'s sweep — reuse it.)
 
-5. **Shields badges (two files, kept in parity).** The badge block lives in
-   **both** `README.md` and `docs/guides/getting-started.md`, and hardcoded
-   badge versions drift silently. For each block:
-   - FastAPI / SQLModel badge versions must match the `pyproject.toml` pins;
-     the Python badge must match `requires-python`; the `PostgreSQL-<major>`
-     badge must match `docker-compose.yml` (`postgres:18`).
-   - The two blocks must carry the **same badges in the same order** — they
-     have fallen out of sync before (one file got a badge fix, the other
-     didn't). Diff them.
+5. **Shields badges (`README.md` only).** The badge block lives in
+   `README.md` and nowhere else — keep it that way. Hardcoded badge versions
+   drift silently, so check: FastAPI / SQLModel badge versions must match the
+   `pyproject.toml` pins; the Python badge must match `requires-python` (the
+   floor, which is lower than the container's Python — not a mismatch); the
+   `PostgreSQL-<major>` badge must match `docker-compose.yml` (`postgres:18`).
+
    Prefer self-updating endpoint badges (CI/Docs status, Release, Ruff, uv,
    prek) over hardcoded version strings, which are the drift-prone kind.
 
@@ -89,6 +87,11 @@ over.
   Surface the discrepancy and let the user decide which side to fix.
 - **Forgetting the settings table is the most drift-prone doc** — `config.py`
   changes land far more often than the table gets updated. Check it first.
-- **Fixing a badge in one file but not the other.** Badges are duplicated in
-  `README.md` and `docs/guides/getting-started.md`; a version bump or new badge
-  must land in both, or they silently diverge.
+- **Flagging `just` aliases as missing recipes.** A naive diff of `just <x>`
+  mentions against `just --list` reports `docb`, `pi`, and `pr` as nonexistent
+  — they are aliases (`docs-build`, `prek-install`, `prek-run`). Resolve
+  aliases before reporting, or you'll file three false positives.
+- **Reading defaults off a live `Settings()` instance.** The local `.env`
+  overrides them, so a doc that is correct looks wrong (`OTEL_ENABLED` reads
+  `False` in dev but is declared `True`). Compare against
+  `Settings.model_fields[name].default`, not `getattr(settings, name)`.
