@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-27
+
 ### Added
 
 - **CI**: a `Copier Update Check` workflow runs on every `v*` tag push,
@@ -14,6 +16,10 @@
 - **Docs**: an
   [API Stability & SemVer guide](docs/guides/api-stability.md) documents
   the versioning guarantee across the template surface.
+- **Docs**: a v1.0 launch checklist on the roadmap gates the `1.0.0`
+  release on the template contract, behaviour and quality, security and
+  distribution, and a final release decision. Task lists now render on
+  the documentation site.
 - **Docs**: an
   [Optimistic Concurrency guide](docs/guides/optimistic-concurrency.md)
   documents the ETag / `If-Match` pattern — version column, the
@@ -28,6 +34,11 @@
   toolchain and production image stay on 3.14.
 - **Docs**: reorganised the documentation-site navigation for
   discoverability; no document URLs changed.
+- **Docs**: the architecture decision log no longer advertises features
+  the roadmap defers. It promised a Redis cache, a background worker,
+  Prometheus metrics, and read-replica routing — two with sample code
+  for APIs that do not exist — and listed Redis session storage despite
+  authentication being stateless JWT validation.
 - **Docs**: pruned the roadmap backlog to demand-gated features only.
 - **Docs**: dropped seven backlog items that do not belong in a backend
   template at any point — rate limiting (belongs at the edge), a secrets
@@ -45,6 +56,14 @@
 - **Template**: generated projects now persist a `.copier-answers.yml`,
   so `copier update` works — previously the template omitted the answers
   file entirely, leaving every generated project unable to take updates.
+- **Template**: the post-generation script no longer silently skips
+  pruning the roadmap entry from `scripts/sync_docs.py`. It matched the
+  entry with the path-adjust flag pinned to one literal value, so once
+  that flag changed the pattern stopped matching while still reporting
+  success, and generated projects shipped a sync script referencing a
+  `ROADMAP.md` the template excludes. The flag is now matched
+  generically and a miss raises instead of passing quietly. The module
+  docstring no longer lists the roadmap either.
 
 ## [0.9.0] - 2026-07-07
 
@@ -558,7 +577,9 @@
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/balakmran/quoin-api/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/balakmran/quoin-api/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/balakmran/quoin-api/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/balakmran/quoin-api/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/balakmran/quoin-api/compare/v0.5.0...v0.6.0
