@@ -633,8 +633,7 @@ QUOIN_POSTGRES_PORT=5432
 ### Scalability
 
 - **Horizontal scaling:** Stateless application (load balance)
-- **Database:** PostgreSQL with read replicas (future)
-- **Caching:** Redis for session storage (future)
+- **Database:** Connection pool sized via the `QUOIN_DB_POOL_*` settings
 
 ### Security
 
@@ -646,31 +645,15 @@ QUOIN_POSTGRES_PORT=5432
 
 - **Logging:** Structured JSON logs for aggregation
 - **Tracing:** OpenTelemetry spans for request flow
-- **Metrics:** Prometheus metrics (future)
 
 ---
 
 ## Future Considerations
 
-### Caching
-
-**Planned:** Redis for caching frequent queries
-
-```python
-@cache(ttl=300)
-async def get_user_by_id(user_id: UUID) -> User:
-    # Cache for 5 minutes
-```
-
-### Background Jobs
-
-**Planned:** Celery or Dramatiq for async task processing
-
-```python
-@task
-async def send_welcome_email(user_id: UUID):
-    # Process in background
-```
+This document records decisions already made, not intentions. Deferred
+features live in the [roadmap backlog](../project/roadmap.md#backlog),
+each with the reason it is deferred; they are promoted into a milestone
+only when a concrete user is blocked on one.
 
 ---
 
