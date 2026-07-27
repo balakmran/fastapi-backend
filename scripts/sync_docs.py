@@ -75,7 +75,7 @@ def main() -> None:
             True,  # Adjust image paths
         ),
         (root / "CHANGELOG.md", docs_project / "changelog.md", True),
-        (root / "ROADMAP.md", docs_project / "roadmap.md", False),
+        (root / "ROADMAP.md", docs_project / "roadmap.md", True),
         (root / "SECURITY.md", docs_project / "security-policy.md", True),
         (root / "LICENSE", docs_project / "license.md", False),
     ]
