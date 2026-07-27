@@ -13,7 +13,7 @@ The project follows these testing principles:
    the full stack (routes → services → repositories → database)
 2. **Real Database**: Use a real PostgreSQL database for repository tests,
    not mocks
-3. **High Coverage**: Maintain >95% code coverage
+3. **Full Coverage**: 100% line and branch coverage, enforced
 4. **Fast Feedback**: Tests should run in <10 seconds
 
 ---
@@ -399,12 +399,14 @@ async def test_with_custom_config(monkeypatch, app):
 
 ## Coverage Requirements
 
-The project maintains high coverage standards:
+Coverage is **100%, enforced** — `fail_under = 100` in
+`[tool.coverage.report]` fails the run below it, so a change that adds
+an untested branch fails `just check` rather than quietly lowering the
+number. Branch coverage is on, so both sides of every conditional must
+be exercised, not just every line.
 
-- **Overall**: >95%
-- **Services**: 100% (business logic must be fully tested)
-- **Routes**: >90% (integration tests)
-- **Models**: >90% (validation tests)
+If a line genuinely cannot be covered, mark it `# pragma: no cover`
+with a reason rather than lowering the gate.
 
 Excluded from coverage:
 
@@ -416,16 +418,19 @@ Excluded from coverage:
 
 ## CI Integration
 
-Tests run automatically on every push via GitHub Actions:
+Tests run automatically on every push via GitHub Actions, as part of
+the single `just check` step:
 
 ```yaml
 # .github/workflows/ci.yml
-- name: Run tests
-  run: just test
-
-- name: Check coverage
-  run: coverage report --fail-under=95
+- name: Run quality checks
+  run: just check
 ```
+
+Coverage is not a separate CI step — `fail_under = 100` in
+`[tool.coverage.report]` ([`pyproject.toml`](../../pyproject.toml))
+fails the run wherever coverage is measured, so CI and `just check`
+enforce the identical gate.
 
 ---
 

@@ -95,45 +95,66 @@ Runs the full test suite with coverage reporting.
 **Requirements**:
 
 - All tests pass
-- Coverage ≥ 95%
+- Coverage = 100% (enforced; the run fails below it)
 
 ---
 
-## Pre-commit Hooks
+## Git Hooks
 
-Install pre-commit hooks to run checks automatically before every commit:
+One command installs both hooks (`just setup` does it too, for new
+clones):
 
 ```bash
-just pi  # Install hooks
+just pi  # Install pre-commit + pre-push hooks
 ```
 
-After installation, hooks run automatically:
+They run at two different points, with deliberately different scope:
+
+| Hook           | Runs                                  | Why there                                  |
+| :------------- | :------------------------------------ | :----------------------------------------- |
+| **pre-commit** | ruff format, ruff check, `ty`         | Fast enough to sit in every commit          |
+| **pre-push**   | the full pytest suite                 | Too slow per commit; catches breakage pre-remote |
 
 ```bash
 git commit -m "feat: add new feature"
-# → Runs format, lint, typecheck automatically
+# → Runs format, lint, typecheck on changed files
+
+git push
+# → Runs the full test suite
 ```
 
-To run hooks manually on all files:
+!!! warning "The pre-push hook needs Postgres"
+
+    The suite runs against a real database, so start it first with
+    `just db` or the push aborts. `just test` and `just check`
+    auto-start it; the git hook does not.
+
+`git push --no-verify` skips the gate. Use it only in emergencies — it
+exists to stop broken code reaching the remote.
+
+To run the pre-commit hooks manually across all files:
 
 ```bash
-just pr  # Run pre-commit on all files
+just pr  # Run pre-commit hooks on all files
 ```
 
 ---
 
 ## CI Integration
 
-All quality checks run automatically on every push via GitHub Actions:
+All quality checks run automatically on every push via GitHub Actions,
+across a Python 3.12 / 3.13 / 3.14 matrix:
 
 ```yaml
 # .github/workflows/ci.yml
-- name: Run all quality checks
+- name: Run quality checks
   run: just check
-
-- name: Verify coverage threshold
-  run: coverage report --fail-under=95
 ```
+
+That one step covers everything, coverage included — the threshold is
+enforced by `fail_under` in `[tool.coverage.report]`
+([`pyproject.toml`](../../pyproject.toml)), not by a separate CI step,
+so the same gate applies locally and in CI.
 
 Dependency CVE scanning is **not** part of this pipeline or of
 `just check` — it needs network access and its result depends on the
@@ -154,7 +175,7 @@ The project maintains strict quality standards:
 | **Formatting**  | 100% compliant | Ruff   |
 | **Linting**     | 0 violations   | Ruff   |
 | **Type Hints**  | 100% coverage  | ty     |
-| **Tests**       | ≥95% coverage  | Pytest |
+| **Tests**       | 100% coverage  | Pytest |
 | **Line Length** | ≤80 chars      | Ruff   |
 
 ---
@@ -196,15 +217,18 @@ If type checking fails:
 
 ### Coverage Below Threshold
 
-If coverage drops below 95%:
+`just check` fails with `Required test coverage of 100.0% not reached`
+when any line or branch goes uncovered. The terminal report lists the
+gaps under `Missing`; for a browsable view:
 
 ```bash
 # Generate HTML coverage report
-pytest --cov=app --cov-report=html
+just test
 open htmlcov/index.html
 ```
 
-Find untested lines and add tests.
+Find untested lines and add tests. If a line genuinely cannot be
+covered, mark it `# pragma: no cover` rather than lowering the gate.
 
 ---
 

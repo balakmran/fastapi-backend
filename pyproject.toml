@@ -71,6 +71,9 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 show_missing = true
+# Only applies where --cov is passed (just test / just check); a bare
+# `pytest tests/foo.py` is unaffected.
+fail_under = 100
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
