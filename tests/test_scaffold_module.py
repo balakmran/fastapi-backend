@@ -41,9 +41,16 @@ def test_scaffold_module_creates_files_and_registers_router(
         "from app.modules.order_item.routes import router\n\n"
         '__all__ = ["router"]\n'
     )
+    # The router carries the shared RFC 9457 error responses, so a new
+    # module documents its error bodies without hand-written boilerplate.
     assert (module_dir / "routes.py").read_text() == (
         "from fastapi import APIRouter\n\n"
-        'router = APIRouter(prefix="/order_items", tags=["order_items"])\n'
+        "from app.core.openapi import DEFAULT_ERROR_RESPONSES\n\n"
+        "router = APIRouter(\n"
+        '    prefix="/order_items",\n'
+        '    tags=["order_items"],\n'
+        "    responses=DEFAULT_ERROR_RESPONSES,\n"
+        ")\n"
     )
     # Stubs are minimally working (not empty), with PascalCase classes.
     assert (

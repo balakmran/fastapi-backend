@@ -307,6 +307,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.openapi import DEFAULT_ERROR_RESPONSES, error_responses
 from app.core.pagination import Page, PageParams
 from app.db.session import get_session
 from app.modules.product.repository import ProductRepository
@@ -317,7 +318,11 @@ from app.modules.product.schemas import (
 )
 from app.modules.product.service import ProductService
 
-router = APIRouter(prefix="/products", tags=["products"])
+router = APIRouter(
+    prefix="/products",
+    tags=["products"],
+    responses=DEFAULT_ERROR_RESPONSES,
+)
 
 
 def get_product_service(
@@ -351,7 +356,11 @@ async def list_products(
     return Page.create(rows, total, page)
 
 
-@router.get("/{product_id}", response_model=ProductRead)
+@router.get(
+    "/{product_id}",
+    response_model=ProductRead,
+    responses=error_responses(404, descriptions={404: "Product not found"}),
+)
 async def get_product(
     product_id: uuid.UUID,
     service: Annotated[ProductService, Depends(get_product_service)],
@@ -360,7 +369,11 @@ async def get_product(
     return await service.get_product(product_id)
 
 
-@router.patch("/{product_id}", response_model=ProductRead)
+@router.patch(
+    "/{product_id}",
+    response_model=ProductRead,
+    responses=error_responses(404, descriptions={404: "Product not found"}),
+)
 async def update_product(
     product_id: uuid.UUID,
     product_update: ProductUpdate,
@@ -370,7 +383,11 @@ async def update_product(
     return await service.update_product(product_id, product_update)
 
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{product_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=error_responses(404, descriptions={404: "Product not found"}),
+)
 async def delete_product(
     product_id: uuid.UUID,
     service: Annotated[ProductService, Depends(get_product_service)],

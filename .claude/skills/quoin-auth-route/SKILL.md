@@ -44,19 +44,19 @@ The bypass: any caller with `api.superuser` in their roles passes every `require
 
 ## The `responses=` block on the router or route
 
-The user module's `APIRouter` declares `401`, `403`, `500` at the router level (so every route inherits them) and per-route extras like `409`. Mirror this — it's how OpenAPI ends up accurate:
+Every module router carries `DEFAULT_ERROR_RESPONSES` (`401`, `403`, `422`, `500`), and routes add their own codes with `error_responses(...)`. Both come from `app.core.openapi` — don't hand-write these dicts:
 
 ```python
+from app.core.openapi import DEFAULT_ERROR_RESPONSES, APITag
+
 router = APIRouter(
     prefix="/things",
     tags=[APITag.things],  # add to app/core/openapi.py if new
-    responses={
-        401: {"model": ErrorResponse, "description": "Unauthorized — missing or invalid token"},
-        403: {"model": ErrorResponse, "description": "Forbidden — token lacks the required scope"},
-        500: {"model": ErrorResponse, "description": "Internal Server Error"},
-    },
+    responses=DEFAULT_ERROR_RESPONSES,
 )
 ```
+
+`just new <module>` already emits this, so a scaffolded router needs no change. The bodies are RFC 9457 `ProblemDetail` served as `application/problem+json`; see `docs/guides/error-handling.md`.
 
 ## Public (unauthenticated) routes
 

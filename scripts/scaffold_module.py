@@ -162,7 +162,12 @@ def scaffold_module(root: Path, module: str) -> None:
     )
     (module_dir / "routes.py").write_text(
         "from fastapi import APIRouter\n\n"
-        f'router = APIRouter(prefix="/{collection}", tags=["{collection}"])\n'
+        "from app.core.openapi import DEFAULT_ERROR_RESPONSES\n\n"
+        "router = APIRouter(\n"
+        f'    prefix="/{collection}",\n'
+        f'    tags=["{collection}"],\n'
+        "    responses=DEFAULT_ERROR_RESPONSES,\n"
+        ")\n"
     )
 
     (module_dir / "models.py").write_text(_models_stub(module))

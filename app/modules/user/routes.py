@@ -4,9 +4,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.openapi import APITag
+from app.core.openapi import (
+    DEFAULT_ERROR_RESPONSES,
+    APITag,
+    error_responses,
+)
 from app.core.pagination import Page, PageParams
-from app.core.schemas import ProblemDetail
 from app.core.security import ServicePrincipal, require_roles
 from app.db.session import get_session
 from app.modules.user.models import User
@@ -17,20 +20,7 @@ from app.modules.user.service import UserService
 router = APIRouter(
     prefix="/users",
     tags=[APITag.users],
-    responses={
-        401: {
-            "model": ProblemDetail,
-            "description": "Unauthorized - Missing or invalid token",
-        },
-        403: {
-            "model": ProblemDetail,
-            "description": "Forbidden - Token lacks the required domain scope",
-        },
-        500: {
-            "model": ProblemDetail,
-            "description": "Internal Server Error",
-        },
-    },
+    responses=DEFAULT_ERROR_RESPONSES,
 )
 
 
@@ -81,12 +71,10 @@ class UserListQuery:
     "/",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
-    responses={
-        409: {
-            "model": ProblemDetail,
-            "description": "User with this email already exists",
-        }
-    },
+    responses=error_responses(
+        409,
+        descriptions={409: "User with this email already exists"},
+    ),
 )
 async def create_user(
     user_create: UserCreate,
@@ -114,12 +102,7 @@ async def list_users(
 @router.get(
     "/{user_id}",
     response_model=UserRead,
-    responses={
-        404: {
-            "model": ProblemDetail,
-            "description": "User not found",
-        }
-    },
+    responses=error_responses(404, descriptions={404: "User not found"}),
 )
 async def get_user(
     user_id: uuid.UUID,
@@ -133,13 +116,14 @@ async def get_user(
 @router.patch(
     "/{user_id}",
     response_model=UserRead,
-    responses={
-        404: {"model": ProblemDetail, "description": "User not found"},
-        409: {
-            "model": ProblemDetail,
-            "description": "Email already registered to another user",
+    responses=error_responses(
+        404,
+        409,
+        descriptions={
+            404: "User not found",
+            409: "Email already registered to another user",
         },
-    },
+    ),
 )
 async def update_user(
     user_id: uuid.UUID,
@@ -154,12 +138,7 @@ async def update_user(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses={
-        404: {
-            "model": ProblemDetail,
-            "description": "User not found",
-        },
-    },
+    responses=error_responses(404, descriptions={404: "User not found"}),
 )
 async def delete_user(
     user_id: uuid.UUID,
