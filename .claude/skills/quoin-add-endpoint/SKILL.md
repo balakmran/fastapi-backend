@@ -71,9 +71,12 @@ input, call one service method, return the result. Keep these rules:
 - **Protect it with `require_roles("<domain>.<action>")`** unless it is
   deliberately public. Pick the role string per `quoin-auth-route` (read and
   write are not hierarchical; require both if the route does both).
-- **Declare the extra error responses** in the per-route `responses=` block
-  (e.g. `404`, `409`) so OpenAPI stays accurate. The router already declares
-  `401`/`403`/`500` at the router level — don't repeat those.
+- **Declare the extra error responses** with
+  `responses=error_responses(404, 409)` from `app.core.openapi`, so OpenAPI
+  stays accurate. Pass `descriptions={404: "User not found"}` when the route
+  can say something better than the generic reason phrase. The router already
+  declares `401`/`403`/`422`/`500` via `DEFAULT_ERROR_RESPONSES` — don't
+  repeat those.
 - Type the return as the **DB model** (e.g. `-> User`) and set
   `response_model=` to the **read schema** (e.g. `UserRead`), matching the
   existing routes.

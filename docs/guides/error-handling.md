@@ -451,28 +451,72 @@ logging before the response is sent:
 
 ## OpenAPI Documentation
 
-Routes declare their error responses using `ProblemDetail` as the
-model:
+Error responses are declared with two helpers from
+`app.core.openapi`, so every module documents the same shapes without
+hand-copied boilerplate.
+
+`DEFAULT_ERROR_RESPONSES` covers the codes *any* authenticated
+endpoint can return — 401, 403, 422, and 500 — and belongs on the
+module router:
 
 ```python
-from app.core.schemas import ProblemDetail
+from app.core.openapi import DEFAULT_ERROR_RESPONSES
+
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
+    responses=DEFAULT_ERROR_RESPONSES,
+)
+```
+
+`error_responses(*codes)` covers the codes a *specific* route can
+raise. Pass `descriptions` when the route can say something more
+useful than the generic reason phrase:
+
+```python
+from app.core.openapi import error_responses
 
 @router.get(
     "/{user_id}",
     response_model=UserRead,
-    responses={
-        404: {
-            "model": ProblemDetail,
-            "description": "User not found",
-        }
-    },
+    responses=error_responses(404, descriptions={404: "User not found"}),
 )
 async def get_user(...) -> User:
     ...
 ```
 
-This ensures the OpenAPI schema correctly documents the RFC 9457
-response shape for every error status code.
+Per-route responses merge with the router's, so a route only declares
+what the router does not already cover. Requesting a code with no
+entry in `_ERROR_DESCRIPTIONS` raises `KeyError` rather than silently
+emitting an undocumented response.
+
+`400` is deliberately **not** in the default set. `BadRequestError`
+exists, but most routes never raise it, and documenting it everywhere
+would describe errors those routes cannot return. Opt in with
+`error_responses(400)` on the routes that do.
+
+### Why the media type is patched after generation
+
+FastAPI always files a `responses` model under `application/json`,
+and the declarative `content` override does not replace that key — it
+adds an empty `application/problem+json` entry *alongside* the real
+`application/json` schema, which is worse than leaving it alone.
+
+So `set_openapi_generator` runs `_use_problem_media_type` over the
+finished schema and relabels the media type to
+`application/problem+json`, matching what the handlers actually send.
+It only rewrites responses whose schema references `ProblemDetail`,
+so a non-problem error body is never mislabelled, and success
+responses and bodyless 204s are untouched.
+
+### The 422 override
+
+Declaring 422 in `DEFAULT_ERROR_RESPONSES` replaces FastAPI's
+built-in `HTTPValidationError` model. This matters: the validation
+handler returns RFC 9457 with an `errors` array, so the default model
+would describe a payload this API never sends. Because every router
+overrides it, `HTTPValidationError` and `ValidationError` drop out of
+`components.schemas` entirely.
 
 ---
 

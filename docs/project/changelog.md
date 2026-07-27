@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+### Added
+
+- **OpenAPI**: `DEFAULT_ERROR_RESPONSES` and `error_responses()` in
+  `app/core/openapi.py` centralize RFC 9457 error declarations. Module
+  routers carry the default set (401, 403, 422, 500); routes add their
+  own codes. `just new <module>` now scaffolds routers with the default
+  set, so new modules document their error bodies out of the box.
+
+### Fixed
+
+- **OpenAPI**: error responses are now documented as
+  `application/problem+json` instead of `application/json`, matching
+  what the exception handlers actually send.
+- **OpenAPI**: `422` responses are now documented as `ProblemDetail`
+  instead of FastAPI's built-in `HTTPValidationError`, which described
+  a payload this API never returns. `HTTPValidationError` and
+  `ValidationError` no longer appear in `components.schemas`.
+
+  Both fixes change generated client SDKs: error models for `422` and
+  the content type of every error response. The wire format is
+  unchanged — only the documented contract was wrong.
+
 ## [0.10.0] - 2026-07-27
 
 ### Known Issues

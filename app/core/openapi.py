@@ -1,4 +1,5 @@
 import inspect
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any, NotRequired, TypedDict
 
@@ -7,6 +8,55 @@ from fastapi.openapi.utils import get_openapi
 
 from app.core import metadata
 from app.core.config import Environment, settings
+from app.core.schemas import ProblemDetail
+
+PROBLEM_MEDIA_TYPE = "application/problem+json"
+
+_ERROR_DESCRIPTIONS: dict[int, str] = {
+    400: "Bad Request",
+    401: "Unauthorized - Missing or invalid token",
+    403: "Forbidden - Token lacks the required role",
+    404: "Not Found",
+    409: "Conflict",
+    422: "Validation Error",
+    500: "Internal Server Error",
+}
+
+
+def error_responses(
+    *codes: int,
+    descriptions: Mapping[int, str] | None = None,
+) -> dict[int | str, dict[str, Any]]:
+    """Build an OpenAPI ``responses`` mapping of RFC 9457 error models.
+
+    Use this for the error codes a specific route can raise. Every
+    module router should additionally carry
+    ``DEFAULT_ERROR_RESPONSES``, which covers the codes any
+    authenticated endpoint can return.
+
+    Args:
+        codes: HTTP status codes to document.
+        descriptions: Optional per-code overrides, for routes that can
+            say something more useful than the generic reason phrase.
+
+    Returns:
+        A mapping suitable for the ``responses`` argument of an
+        ``APIRouter`` or a route decorator.
+
+    Raises:
+        KeyError: If a code has no entry in ``_ERROR_DESCRIPTIONS``.
+    """
+    overrides = descriptions or {}
+    return {
+        code: {
+            "model": ProblemDetail,
+            "description": overrides.get(code, _ERROR_DESCRIPTIONS[code]),
+        }
+        for code in codes
+    }
+
+
+DEFAULT_ERROR_RESPONSES = error_responses(401, 403, 422, 500)
 
 
 class OpenAPIExternalDoc(TypedDict):
@@ -75,6 +125,43 @@ OPENAPI_PARAMETERS: OpenAPIParameters = {
 }
 
 
+_OPENAPI_METHODS = frozenset(
+    {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+)
+
+_PROBLEM_DETAIL_REF = "#/components/schemas/ProblemDetail"
+
+
+def _use_problem_media_type(schema: dict[str, Any]) -> None:
+    """Relabel RFC 9457 error bodies as ``application/problem+json``.
+
+    FastAPI always files a ``responses`` model under
+    ``application/json``, and the declarative ``content`` override
+    emits a broken duplicate entry rather than replacing that key. So
+    the media type is corrected after generation instead, to match what
+    ``app.core.exception_handlers`` actually sends on the wire.
+
+    Only responses whose schema references ``ProblemDetail`` are
+    touched, so a non-problem error body is never mislabelled.
+
+    Args:
+        schema: Generated OpenAPI schema, modified in place.
+    """
+    for path_item in schema.get("paths", {}).values():
+        for method, operation in path_item.items():
+            if method not in _OPENAPI_METHODS:
+                continue
+            for response in operation.get("responses", {}).values():
+                content = response.get("content", {})
+                media = content.get("application/json")
+                if media is None:
+                    continue
+                if media.get("schema", {}).get("$ref") == _PROBLEM_DETAIL_REF:
+                    content[PROBLEM_MEDIA_TYPE] = content.pop(
+                        "application/json"
+                    )
+
+
 def set_openapi_generator(app: FastAPI) -> None:
     """Set the custom OpenAPI generator for the application."""
 
@@ -98,6 +185,8 @@ def set_openapi_generator(app: FastAPI) -> None:
             separate_input_output_schemas=app.separate_input_output_schemas,
         )
 
+        _use_problem_media_type(openapi_schema)
+
         app.openapi_schema = openapi_schema
         return app.openapi_schema
 
@@ -105,7 +194,10 @@ def set_openapi_generator(app: FastAPI) -> None:
 
 
 __all__ = [
+    "DEFAULT_ERROR_RESPONSES",
     "OPENAPI_PARAMETERS",
+    "PROBLEM_MEDIA_TYPE",
     "APITag",
+    "error_responses",
     "set_openapi_generator",
 ]
