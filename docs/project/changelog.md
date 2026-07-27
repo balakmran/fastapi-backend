@@ -14,6 +14,12 @@
 - **Docs**: an
   [API Stability & SemVer guide](../guides/api-stability.md) documents
   the versioning guarantee across the template surface.
+- **Docs**: an
+  [Optimistic Concurrency guide](../guides/optimistic-concurrency.md)
+  documents the ETag / `If-Match` pattern — version column, the
+  `version_id_col` mapper argument, a 412 domain exception, and the
+  route/service/repository split — replacing the backlog item with a
+  pattern you can apply per-endpoint.
 
 ### Changed
 
@@ -23,6 +29,12 @@
 - **Docs**: reorganised the documentation-site navigation for
   discoverability; no document URLs changed.
 - **Docs**: pruned the roadmap backlog to demand-gated features only.
+- **Docs**: dropped seven backlog items that do not belong in a backend
+  template at any point — rate limiting (belongs at the edge), a secrets
+  manager adapter (sidecars already inject env), PII classification and
+  field-level encryption, feature flags, the audit log table, retention
+  and erasure jobs (all business-specific), and ETag concurrency, which
+  is now a guide instead. Ten demand-gated items remain.
 - **Dependencies**: upgraded FastAPI, SQLModel, greenlet, and the
   ruff/ty/prek/zensical toolchain, plus a transitive lock refresh.
 - **Dependencies**: added `httpx2` to the `test` group to silence a

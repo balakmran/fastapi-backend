@@ -23,6 +23,7 @@ nav = [
         { "API Design" = [
             { "Error Handling" = "guides/error-handling.md" },
             { "Deprecating Endpoints" = "guides/deprecating-endpoints.md" },
+            { "Optimistic Concurrency" = "guides/optimistic-concurrency.md" },
             { "Outbound HTTP Client" = "guides/outbound-http.md" },
         ]},
         { "Quality" = [

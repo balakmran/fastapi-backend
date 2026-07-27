@@ -35,6 +35,16 @@ than parked — they belong in your infrastructure repo, not a backend
 code template. All observability follows OpenTelemetry and CNCF
 standards — no vendor-specific tooling.
 
+Features are dropped rather than parked on the same test: shipping them
+would be wrong regardless of demand, because they are better solved at
+the edge, depend on facts only the deployer knows, or would compete
+badly with a mature product category. Rate limiting, a secrets-manager
+adapter, PII encryption, feature flags, an audit table, and retention
+jobs all failed it. ETag concurrency left the backlog too, but as a
+[guide](docs/guides/optimistic-concurrency.md) rather than a deletion —
+the pattern is worth documenting even though the code isn't worth
+shipping.
+
 ---
 
 ## v0.10.0 — Template Completeness
@@ -151,23 +161,16 @@ not "it would be nice to have".
 
 | Status | Feature | Why deferred |
 | :----- | :------ | :----------- |
-| 💡 | **Rate limiting (`slowapi`)** | In-memory backend is dev-only and shared-state in prod requires Redis (also backlog). Most production deployers rate-limit at the edge (NGINX, Cloudflare, API gateway, ALB); in-app rate limiting is niche enough to demand-gate. |
-| 💡 | **ETag / `If-Match` optimistic concurrency** | Genuinely useful for some apps but most CRUD APIs don't need it. Pattern can be documented in `docs/guides/` without code in the template. |
 | 💡 | **Idempotency keys (DB-backed store)** | Significant scope (replay logic, TTL semantics, key collision handling). Retry-safe idempotent verbs (`PUT`, `DELETE`) + client-supplied request IDs cover most cases. Build when actually needed. |
 | 💡 | **OTel Metrics + `/metrics` endpoint** | RED metrics can be derived from the existing OTLP trace stream in the OTel Collector. Direct Prometheus scrape is duplicate plumbing unless a deployer specifically needs it. |
-| 💡 | **Audit log table + actor propagation** | Structured logs already carry `request_id`, `trace_id`, caller subject, and path. A dedicated `audit` table is a compliance feature whose design depends on retention, immutability, and export needs that are business-specific. |
-| 💡 | **Secrets manager adapter** | `pydantic-settings` already reads env vars. Vault/Doppler/ASM have battle-tested sidecars and init-containers that inject env at runtime; an in-app adapter duplicates that and couples the template to one abstraction. |
-| 💡 | **PII classification + field-level encryption** | Huge design surface (key rotation, search-on-encrypted, KMS integration) that's deeply business-specific. Build when a real PII column needs it. |
 | 💡 | **Schemathesis contract testing in CI** | Pays off when external consumers lock against the schema. Adds CI minutes and flaky-test risk before that point. |
 | 💡 | **Cursor-based pagination** | Premature unless a module hits million-row tables. Offset pagination is sufficient through `1.0`. |
-| 💡 | **Feature flags (Unleash/GrowthBook compatible)** | Large surface (DB-backed module + swappable interface) with no stated demand. |
 | 💡 | **Background task worker** | Persistent async task queue for emails, webhooks, and long-running work; evaluate Arq (asyncio-native) vs Dramatiq (broker-agnostic). |
 | 💡 | **Redis cache layer** | Shared Redis client and caching helpers; replaces DB-backed idempotency store at scale. |
 | 💡 | **Multi-tenancy pattern** | Tenant-scoped query pattern with an example module. |
 | 💡 | **Organizations + memberships + scopes** | Richer authorization model beyond `require_roles`. |
 | 💡 | **API keys** | Hashed at rest, scoped, rotatable; for service-to-service callers. |
 | 💡 | **Read-replica routing** | Repository-layer routing of reads to replicas. Pool sizing itself is already tunable via `QUOIN_DB_POOL_*`. |
-| 💡 | **Retention / erasure jobs** | GDPR Article 17 erasure on soft-deleted rows. |
 
 ---
 

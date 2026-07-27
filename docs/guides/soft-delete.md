@@ -71,9 +71,10 @@ valid, pointing at a row that still exists but reads as deleted.
 ## What's intentionally not here
 
 - **Hard delete / purge** — true removal of tombstoned rows (for GDPR
-  Article 17 erasure, for example) is a scheduled retention job, tracked
-  in the [backlog](../project/roadmap.md#backlog). The soft-delete
-  tombstone is the hook a future erasure job filters on.
+  Article 17 erasure, for example) is a scheduled retention job the
+  deployer owns. The retention period is jurisdiction- and
+  business-specific, so the template does not pick one for you. The
+  soft-delete tombstone is the hook such a job filters on.
 - **Un-delete / restore** — trivial to add (clear `deleted_at`) but left
   out of the template until a resource needs it; mind the partial index
   if the email was re-registered in the meantime.
