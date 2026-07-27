@@ -8,6 +8,7 @@ from app.core import config as config_module
 from app.core import openapi as openapi_module
 from app.core.config import Environment
 from app.core.openapi import (
+    _PROBLEM_DETAIL_REF,
     DEFAULT_ERROR_RESPONSES,
     PROBLEM_MEDIA_TYPE,
     error_responses,
@@ -15,8 +16,6 @@ from app.core.openapi import (
 )
 from app.core.schemas import ProblemDetail
 from app.main import create_app
-
-_PROBLEM_REF = "#/components/schemas/ProblemDetail"
 
 
 @pytest.fixture
@@ -85,6 +84,20 @@ def test_error_responses_rejects_undocumented_code() -> None:
         error_responses(418)
 
 
+def test_error_responses_rejects_unmatched_description_key() -> None:
+    """A typo'd override fails instead of shipping the generic phrase.
+
+    Dropping it silently would leave the route documented with the
+    reason phrase the caller was trying to replace, with no signal.
+    """
+    with pytest.raises(ValueError, match="descriptions keys not in codes"):
+        error_responses(404, 409, descriptions={404: "Gone", 490: "Taken"})
+
+    # A str key is an easy mistake, since OpenAPI emits string codes.
+    with pytest.raises(ValueError, match="descriptions keys not in codes"):
+        error_responses(404, descriptions={"404": "User not found"})  # type: ignore
+
+
 def test_default_error_responses_cover_auth_and_validation() -> None:
     """Every authenticated route documents these four codes."""
     assert set(DEFAULT_ERROR_RESPONSES) == {401, 403, 422, 500}
@@ -111,7 +124,7 @@ def test_error_responses_use_problem_media_type(
                     f"{code} should use {PROBLEM_MEDIA_TYPE}"
                 )
                 assert content[PROBLEM_MEDIA_TYPE]["schema"]["$ref"] == (
-                    _PROBLEM_REF
+                    _PROBLEM_DETAIL_REF
                 )
                 seen += 1
     assert seen > 0, "no error responses found to check"
@@ -124,12 +137,20 @@ def test_validation_errors_documented_as_problem_detail(
 
     The validation handler returns RFC 9457 with an ``errors`` array,
     so the default FastAPI 422 model would mislead generated SDKs.
+
+    Operations without validatable parameters get no 422 from FastAPI
+    at all, so this skips them rather than indexing blindly.
     """
+    seen = 0
     for path_item in schema["paths"].values():
         for operation in path_item.values():
-            response = operation["responses"]["422"]
+            response = operation["responses"].get("422")
+            if response is None:
+                continue
             ref = response["content"][PROBLEM_MEDIA_TYPE]["schema"]["$ref"]
-            assert ref == _PROBLEM_REF
+            assert ref == _PROBLEM_DETAIL_REF
+            seen += 1
+    assert seen > 0, "no 422 responses found to check"
 
 
 def test_fastapi_validation_schemas_not_exposed(
@@ -169,7 +190,7 @@ def test_media_type_rewrite_skips_non_operation_keys() -> None:
                         "404": {
                             "content": {
                                 "application/json": {
-                                    "schema": {"$ref": _PROBLEM_REF}
+                                    "schema": {"$ref": _PROBLEM_DETAIL_REF}
                                 }
                             }
                         }

@@ -45,8 +45,17 @@ def error_responses(
 
     Raises:
         KeyError: If a code has no entry in ``_ERROR_DESCRIPTIONS``.
+        ValueError: If ``descriptions`` carries a key that is not in
+            ``codes``. Silently dropping it would ship the generic
+            reason phrase for a route the caller meant to describe.
     """
     overrides = descriptions or {}
+    unmatched = sorted(set(overrides) - set(codes))
+    if unmatched:
+        raise ValueError(
+            f"descriptions keys not in codes: {unmatched}. "
+            f"Documented codes are {sorted(codes)}."
+        )
     return {
         code: {
             "model": ProblemDetail,
