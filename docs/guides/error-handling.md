@@ -486,9 +486,14 @@ async def get_user(...) -> User:
 ```
 
 Per-route responses merge with the router's, so a route only declares
-what the router does not already cover. Requesting a code with no
-entry in `_ERROR_DESCRIPTIONS` raises `KeyError` rather than silently
-emitting an undocumented response.
+what the router does not already cover.
+
+Both failure modes are loud rather than silent: requesting a code with
+no entry in `_ERROR_DESCRIPTIONS` raises `KeyError`, and passing a
+`descriptions` key that matches none of the requested codes raises
+`ValueError`. The latter matters because a typo (`490` for `409`, or a
+string `"404"`) would otherwise ship the generic reason phrase the
+caller was trying to replace, with nothing to notice it.
 
 `400` is deliberately **not** in the default set. `BadRequestError`
 exists, but most routes never raise it, and documenting it everywhere
