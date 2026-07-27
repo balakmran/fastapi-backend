@@ -65,6 +65,29 @@ def test_setup_logging_not_dev() -> None:
         mock_root_logger.setLevel.assert_called_with(logging.INFO)
 
 
+def test_setup_logging_dev_leaves_stdlib_logging_alone() -> None:
+    """Development skips the stdlib handler wiring entirely.
+
+    The mirror of ``test_setup_logging_not_dev``. Without it the
+    false branch is only covered when the runner happens to have
+    ``QUOIN_ENV=development`` in a local ``.env`` -- which is why it
+    passed locally and failed in CI, where no ``.env`` exists.
+    """
+    with (
+        patch("app.core.logging.settings.ENV", Environment.development),
+        patch("logging.getLogger") as mock_get_logger,
+    ):
+        mock_root_logger = MagicMock()
+        mock_get_logger.return_value = mock_root_logger
+
+        setup_logging()
+
+        # ConsoleRenderer handles dev output; the stdlib root logger is
+        # left untouched.
+        mock_root_logger.handlers.clear.assert_not_called()
+        mock_root_logger.addHandler.assert_not_called()
+
+
 def test_add_otel_context_injects_fields_when_span_valid() -> None:
     """Test trace_id and span_id are added when an active span exists."""
     mock_ctx = MagicMock()
