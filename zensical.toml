@@ -140,6 +140,7 @@ extensions = [
     "admonition",
     "pymdownx.details",
     { "pymdownx.tabbed" = { alternate_style = true } },
+    { "pymdownx.tasklist" = { custom_checkbox = true } },
 ]
 
 [project.plugins]

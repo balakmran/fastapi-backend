@@ -295,12 +295,31 @@ def prune_sync_docs() -> None:
     if not sync_path.exists():
         return
     content = sync_path.read_text(encoding="utf-8")
-    content = re.sub(
+    # The path-adjust flag is matched generically: it flipped to True once
+    # the roadmap gained docs/guides/ links, and pinning the literal would
+    # make this a silent no-op the next time it changes.
+    content, removed = re.subn(
         r'        \(root / "ROADMAP\.md", docs_project / "roadmap\.md", '
-        r"False\),\n",
+        r"(?:True|False)\),\n",
         "",
         content,
     )
+
+    # Fail loudly rather than shipping a generated project whose sync
+    # script still points at the ROADMAP.md that copier.yml excludes.
+    if not removed:
+        raise RuntimeError(
+            "scripts/sync_docs.py has no ROADMAP entry matching the "
+            "pattern in prune_sync_docs(); the pattern needs updating."
+        )
+
+    # The module docstring lists what the script copies, so drop the
+    # roadmap from it too. Unlike the entry above this is cosmetic, so a
+    # miss here must not abort generation the way the guard above does.
+    content = re.sub(
+        r"(?<=CHANGELOG\.md, )ROADMAP\.md,\s+", "", content, count=1
+    )
+
     sync_path.write_text(content, encoding="utf-8")
     print("Pruned ROADMAP from scripts/sync_docs.py")
 

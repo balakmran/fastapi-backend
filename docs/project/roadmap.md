@@ -23,8 +23,8 @@ delete, and deprecation mechanism shipped in `0.9.0`, and the API
 stability and semver policy is now published (see the
 [CHANGELOG](changelog.md)). The one remaining milestone below carries
 QuoinAPI to template completeness; it is independently shippable, gated
-by `just check` plus the existing pre-push hook, and may become
-`v1.0.0`.
+by the launch checklist, `just check`, and the existing pre-push hook. It
+may become `v1.0.0`.
 
 The backlog below is deliberately narrow: it lists only demand-gated
 *features* — application code we would ship behind a feature flag or as
@@ -40,15 +40,106 @@ standards — no vendor-specific tooling.
 ## v0.10.0 — Template Completeness
 
 The milestone that makes QuoinAPI a self-contained, production-ready
-Copier template with opt-in feature flags and a stability guarantee.
-Whether this becomes `v1.0.0` will be decided once the preceding
-releases are shipped and the scope is clear.
+Copier template with a stability guarantee. JWT validation and RBAC remain
+built-in: an API gateway complements service-level authorization rather
+than replacing it. Whether this becomes `v1.0.0` will be decided once the
+launch gate below is complete.
 
 | Status | Feature |
 | :----- | :------ |
 | ✅ | **API stability + semver policy** — Public guarantee on what changes are breaking and how deprecations land |
-| 📋 | **Copier feature flags** — `auth` as an opt-in boolean variable in `copier.yml` |
-| 📋 | **Launch checklist** — Every preceding phase verified complete |
+| 📋 | **Launch checklist** — Every preceding phase verified complete (see [v1.0 Launch Checklist](#v10-launch-checklist)) |
+
+---
+
+## v1.0 Launch Checklist
+
+This is a one-time repository release gate, not a deployment runbook for
+generated projects. Check every item on the release candidate commit before
+deciding whether to release `v1.0.0`.
+
+### Template contract
+
+- [ ] Review the [API Stability & SemVer Policy](../guides/api-stability.md)
+    against every change since `v0.9.0`; classify any required consumer
+    action in `CHANGELOG.md`.
+- [ ] Confirm `copier.yml` prompts, `scripts/copier_setup.py.jinja`, and
+    generated metadata still produce a de-branded project.
+- [ ] Generate a clean project from the release candidate and run its full
+    gate. Commit or stash everything first: Copier generates from the
+    working tree, so a dirty checkout silently smoke-tests uncommitted
+    changes instead of the release candidate.
+
+    ```bash
+    git status --porcelain   # must be empty
+    uvx copier copy --trust . ../quoinapi-v1-smoke
+    cd ../quoinapi-v1-smoke
+    uv sync --all-groups
+    just check
+    ```
+
+- [ ] Confirm the generated project contains no QuoinAPI roadmap, release
+    notes, contributor policy, or maintainer identity beyond the answers
+    supplied to Copier.
+- [ ] Verify the `copier update` path from the previous release *before*
+    pushing the tag — the Copier Update Check workflow only runs on `v*`
+    tags, so it reports after the release decision, not before it. Create
+    the candidate tag locally, verify, then push. Both arguments must be
+    real tags: the check compares the tag string against the `_commit`
+    recorded in `.copier-answers.yml`, so `HEAD` or a branch name fails.
+
+    ```bash
+    git tag v1.0.0
+    just verify-template-update v0.9.0 v1.0.0
+    ```
+
+### Behaviour and quality
+
+- [ ] Run `just check` from a clean checkout and confirm 100% coverage.
+- [ ] Run `just docb`; review the built site for broken links, navigation,
+    API-reference rendering, and the current configuration tables.
+- [ ] Start the local stack with `just dev`; verify `/health`, `/ready`,
+    `/docs`, one authenticated request, and one denied request.
+- [ ] Verify production configuration fails closed when the OAuth issuer,
+    audience, or HTTPS JWKS URI is absent or invalid.
+- [ ] Review the public OpenAPI document and RFC 9457 error examples for
+    intentional endpoint, response, and security-scheme changes only.
+
+### Security and distribution
+
+- [ ] Confirm GitHub Actions remain SHA-pinned and Dependabot covers Python,
+    Docker, and GitHub Actions dependencies.
+- [ ] Run the CVE scan — it is deliberately not part of `just check`, so
+    nothing else in the release path runs it. Every advisory left in
+    `audit_ignore` needs a current dated justification in the
+    [Dependency Scanning](../guides/dependency-scanning.md) guide.
+
+    ```bash
+    just audit
+    just audit-prod
+    ```
+
+- [ ] Confirm the Docker image builds, starts as the non-root `quoin` user,
+    passes its health check, and disables docs and OpenAPI in production.
+- [ ] Review `.env.example`, the Configuration guide, and the Security and
+    Deployment guides together; every supported `QUOIN_*` setting must be
+    documented without committing a credential.
+- [ ] Confirm the security policy names `main` and the latest tag as the
+    supported template versions and provides a private reporting route.
+
+### Release decision
+
+- [ ] Triage every open issue and pull request as release-blocking,
+    explicitly deferred, or post-`v1.0.0` work.
+- [ ] Record the final scope and all intentional deferrals in the
+    `CHANGELOG.md` release section.
+- [ ] Obtain maintainer approval that the template contract is stable enough
+    for the `1.x` major-version promise.
+- [ ] Follow the [Release Workflow](../guides/release-workflow.md) to bump,
+    merge, tag, and publish the release.
+
+Once complete, move this checklist to the release notes and replace the
+`v0.10.0` milestone with the next demand-backed milestone.
 
 ---
 
