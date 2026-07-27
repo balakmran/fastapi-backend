@@ -4,6 +4,18 @@
 
 ## [0.10.0] - 2026-07-27
 
+### Known Issues
+
+- **CI**: the `Copier Update Check` workflow below will show a red run on
+  this tag. It diffs against the previous tag, `v0.9.0`, which predates
+  the `.copier-answers.yml` persistence fix in this release — a project
+  generated from `v0.9.0` has no answers file for `copier update` to
+  diff against, and no later change can retroactively add one to an
+  already-tagged release. Confirmed locally via
+  `just verify-template-update v0.9.0 v0.10.0`. Verification is clean
+  from `v0.11.0` onward, once both sides of the diff carry the answers
+  file.
+
 ### Added
 
 - **CI**: a `Copier Update Check` workflow runs on every `v*` tag push,
