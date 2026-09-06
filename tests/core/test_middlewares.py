@@ -29,6 +29,7 @@ from app.core.middlewares import (
     configure_middlewares,
     configure_trusted_hosts,
 )
+from app.core.openapi import DOCS_URL, REDOC_URL
 from app.main import create_app
 
 
@@ -434,6 +435,71 @@ async def test_security_headers_emitted(
     hsts = response.headers["Strict-Transport-Security"]
     assert "max-age=" in hsts
     assert "includeSubDomains" in hsts
+
+
+@pytest.mark.asyncio
+async def test_default_csp_on_ordinary_paths(
+    security_headers_app: FastAPI,
+) -> None:
+    """Every path but /docs gets the inline-script-free policy (S6)."""
+    async with AsyncClient(
+        transport=ASGITransport(app=security_headers_app),
+        base_url="http://test",
+    ) as ac:
+        response = await ac.get("/x")
+
+    assert response.headers["Content-Security-Policy"] == settings.SECURITY_CSP
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("path", "setting"),
+    [
+        (DOCS_URL, "SECURITY_CSP_DOCS"),
+        (REDOC_URL, "SECURITY_CSP_REDOC"),
+    ],
+)
+async def test_doc_ui_paths_get_their_own_csp(path: str, setting: str) -> None:
+    """Each built-in doc UI is served under its own policy (S6).
+
+    Swagger UI bootstraps from an inline <script> FastAPI generates;
+    ReDoc renders data: icons and builds its search index in a blob:
+    worker. Neither can run under the default policy — and nothing else
+    should inherit either exemption.
+    """
+    app = FastAPI()
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    @app.get(path)
+    async def doc_ui() -> dict[str, str]:
+        return {}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get(path)
+
+    csp = response.headers["Content-Security-Policy"]
+    assert csp == getattr(settings, setting)
+    assert csp != settings.SECURITY_CSP
+
+
+def test_redoc_csp_covers_what_redoc_actually_loads() -> None:
+    """The ReDoc policy names each directive ReDoc needs (S6).
+
+    Pinned because a blob: worker falls back to `script-src` when
+    `worker-src` is unset, which is easy to drop by accident when
+    editing the policy.
+    """
+    csp = settings.SECURITY_CSP_REDOC
+    assert "worker-src 'self' blob:" in csp
+    assert "img-src 'self' data:" in csp
+    assert "https://cdn.redoc.ly" in csp
+    # Swagger UI draws its toolbar icons from data: URIs too.
+    assert "img-src 'self' data:" in settings.SECURITY_CSP_DOCS
+    # The relaxations stay out of the policy every other path gets.
+    assert "worker-src" not in settings.SECURITY_CSP
+    assert "data:" not in settings.SECURITY_CSP
 
 
 @pytest.mark.asyncio

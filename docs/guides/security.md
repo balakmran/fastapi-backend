@@ -74,14 +74,14 @@ Toggle via `QUOIN_SECURITY_HEADERS_ENABLED=false` if your reverse proxy
 ### Content-Security-Policy
 
 The default CSP accommodates the built-in homepage (Google Fonts,
-simpleicons CDN, and inline styles/scripts):
+simpleicons CDN, and an inline `<style>` block):
 
 ```
 default-src 'self';
 style-src  'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
 font-src   'self' https://fonts.gstatic.com;
 img-src    'self' https://cdn.simpleicons.org https://fastapi.tiangolo.com;
-script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+script-src 'self' https://cdn.jsdelivr.net;
 frame-ancestors 'none';
 base-uri 'self'
 ```
@@ -89,17 +89,44 @@ base-uri 'self'
 The default covers two built-in UIs:
 
 - **Homepage** — Google Fonts (`fonts.googleapis.com` / `fonts.gstatic.com`)
-  and tech-logo icons (`cdn.simpleicons.org`).
-- **Swagger UI** (`/docs`) — FastAPI loads its UI assets and favicon from
-  `cdn.jsdelivr.net` and `fastapi.tiangolo.com`.
+  and tech-logo icons (`cdn.simpleicons.org`). Its behaviour lives in
+  `app/static/js/home.js`, not in an inline `<script>`.
+- **Swagger UI** (`/docs`) and **ReDoc** (`/redoc`) — FastAPI loads
+  their UI assets and favicon from `cdn.jsdelivr.net` and
+  `fastapi.tiangolo.com`. Both need a directive the app itself does
+  not; see below.
 
-!!! note "unsafe-inline"
-    Both `style-src` and `script-src` include `'unsafe-inline'` because
-    the homepage uses inline `<style>` and `<script>` blocks. Moving those
-    to static files would let you drop `'unsafe-inline'` for a stricter
-    policy.
+### The doc-UI exceptions
 
-Override it for your own frontend:
+`script-src` deliberately omits `'unsafe-inline'` — it is the directive
+scanners flag first, and nothing the template *serves* needs it. The two
+built-in doc UIs are the exceptions, and each gets its own policy rather
+than loosening the default for every route:
+
+| Path | Setting | Needs | Why |
+| :--- | :--- | :--- | :--- |
+| `/docs` | `QUOIN_SECURITY_CSP_DOCS` | `script-src 'unsafe-inline'`, `img-src data:` | FastAPI generates an inline `<script>` that bootstraps `SwaggerUIBundle`; toolbar icons are `data:` URIs |
+| `/redoc` | `QUOIN_SECURITY_CSP_REDOC` | `img-src data: https://cdn.redoc.ly`, `worker-src blob:` | Anchor icons are `data:` URIs, the "powered by" logo comes from ReDoc's CDN, and the search index is built in a `blob:` worker |
+
+`SecurityHeadersMiddleware` scopes each to its exact path; every other
+route — your own included — gets the strict default. In `production`
+neither docs route is registered, so neither relaxed policy is ever
+emitted there.
+
+!!! warning "worker-src falls back to script-src"
+    A `blob:` worker is checked against `worker-src`, and when that
+    directive is *absent* the browser falls back to `script-src` —
+    where neither `'self'` nor `'unsafe-inline'` covers a `blob:` URL.
+    That is why the ReDoc policy names `worker-src` explicitly. Dropping
+    it silently breaks ReDoc's search.
+
+!!! note "style-src 'unsafe-inline'"
+    `style-src` still allows inline styles: the homepage carries one
+    `<style>` block, and both Swagger UI and ReDoc inject styles at
+    runtime. Inline *styles* are a far smaller lever than inline
+    scripts.
+
+Override the default for your own frontend:
 
 ```bash
 QUOIN_SECURITY_CSP=default-src 'self'; img-src 'self' data:; \
@@ -184,14 +211,33 @@ issuer is `None`, so an unset issuer would let any token signed by a
 JWKS key through regardless of `iss`.
 
 In `production` these are validated at **app startup**
-(`validate_production_oauth()` is called from `create_app()`), and the
-JWKS URI must be `https://` — an `http://` endpoint would let an
+(`validate_production_settings()` is called from `create_app()`), and
+the JWKS URI must be `https://` — an `http://` endpoint would let an
 on-path attacker substitute signing keys. A misconfigured production
 deployment therefore crash-loops rather than serving 401s while
 appearing healthy. The check lives in `create_app()` rather than on
 config import so data-plane tooling that only imports settings —
 Alembic migrations, scripts — stays decoupled from OAuth. Development
 and test skip the check.
+
+### What else production refuses to boot without
+
+`validate_production_settings()` covers more than OAuth:
+
+| Setting | In production | Why |
+| :--- | :--- | :--- |
+| `QUOIN_OAUTH_JWKS_URI` | Required, `https://` | Signing-key substitution |
+| `QUOIN_OAUTH_ISSUER` | Required | PyJWT skips an unset `iss` |
+| `QUOIN_OAUTH_AUDIENCE` | Required | Token replay across audiences |
+| `QUOIN_ALLOWED_HOSTS` | Required, must differ from the default | The default rejects every real `Host` with a 400 |
+| `QUOIN_BACKEND_CORS_ORIGINS` | Warns on `localhost` entries | A leftover dev origin in a production allow-list |
+
+`ALLOWED_HOSTS` is a **hard** failure rather than a warning because the
+default fails *closed*: the service is safe but returns 400 to
+everything, which pages as an outage instead of pointing at the config.
+Localhost CORS origins only *warn* — they are a smell in production but
+harmless on their own, and a deployment may legitimately keep one for a
+bastion. The warning is logged as `production_local_cors_origins`.
 
 ### JWKS refresh backoff
 

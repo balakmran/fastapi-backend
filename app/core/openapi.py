@@ -118,13 +118,23 @@ class OpenAPIParameters(TypedDict):
     swagger_ui_parameters: dict[str, Any]
 
 
+#: Swagger UI path. Named so `SecurityHeadersMiddleware` can scope the
+#: relaxed docs CSP to exactly this route.
+DOCS_URL = "/docs"
+
+#: ReDoc path. Listed for symmetry; ReDoc needs no inline script and so
+#: is served under the default policy.
+REDOC_URL = "/redoc"
+
 OPENAPI_PARAMETERS: OpenAPIParameters = {
     "title": metadata.APP_NAME,
     "summary": metadata.APP_DESCRIPTION,
     "version": metadata.VERSION,
     "description": inspect.cleandoc(metadata.APP_LONG_DESCRIPTION),
-    "docs_url": "/docs" if settings.ENV != Environment.production else None,
-    "redoc_url": "/redoc" if settings.ENV != Environment.production else None,
+    "docs_url": DOCS_URL if settings.ENV != Environment.production else None,
+    "redoc_url": (
+        REDOC_URL if settings.ENV != Environment.production else None
+    ),
     "openapi_url": (
         "/openapi.json" if settings.ENV != Environment.production else None
     ),
@@ -204,8 +214,10 @@ def set_openapi_generator(app: FastAPI) -> None:
 
 __all__ = [
     "DEFAULT_ERROR_RESPONSES",
+    "DOCS_URL",
     "OPENAPI_PARAMETERS",
     "PROBLEM_MEDIA_TYPE",
+    "REDOC_URL",
     "APITag",
     "error_responses",
     "set_openapi_generator",

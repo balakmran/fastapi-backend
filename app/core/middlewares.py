@@ -12,6 +12,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import Environment, settings
 from app.core.exception_handlers import _problem_title
+from app.core.openapi import DOCS_URL, REDOC_URL
 from app.core.schemas import ProblemDetail
 
 logger = structlog.get_logger(__name__)
@@ -202,6 +203,13 @@ class SecurityHeadersMiddleware:
     Referrer-Policy, and Permissions-Policy. All values are configurable
     via ``QUOIN_SECURITY_*`` settings; the middleware itself is gated by
     ``QUOIN_SECURITY_HEADERS_ENABLED``. Pure ASGI.
+
+    The two built-in doc UIs get their own policies —
+    ``QUOIN_SECURITY_CSP_DOCS`` for the inline script Swagger UI
+    bootstraps itself with, ``QUOIN_SECURITY_CSP_REDOC`` for ReDoc's
+    ``data:`` icons, CDN logo, and ``blob:`` search worker. Every other
+    path — the app's own pages included — gets the default policy,
+    which allows none of those.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -216,16 +224,45 @@ class SecurityHeadersMiddleware:
             await self.app(scope, receive, send)
             return
 
+        csp = _csp_for(scope.get("path", ""))
+
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
-                _apply_security_headers(MutableHeaders(raw=message["headers"]))
+                _apply_security_headers(
+                    MutableHeaders(raw=message["headers"]), csp
+                )
             await send(message)
 
         await self.app(scope, receive, send_with_headers)
 
 
-def _apply_security_headers(headers: MutableHeaders) -> None:
-    """Set the configured security headers, never clobbering existing ones."""
+def _csp_for(path: str) -> str:
+    """Return the Content-Security-Policy that applies to a path.
+
+    The two built-in doc UIs each need one directive the app itself
+    does not, so they get their own policy rather than loosening the
+    default for every route. Both are unregistered in production.
+
+    Args:
+        path: The request path.
+
+    Returns:
+        The configured policy for that path, or the default.
+    """
+    if path == DOCS_URL:
+        return settings.SECURITY_CSP_DOCS
+    if path == REDOC_URL:
+        return settings.SECURITY_CSP_REDOC
+    return settings.SECURITY_CSP
+
+
+def _apply_security_headers(headers: MutableHeaders, csp: str) -> None:
+    """Set the configured security headers, never clobbering existing ones.
+
+    Args:
+        headers: The outbound response headers, modified in place.
+        csp: The Content-Security-Policy to apply; empty to omit it.
+    """
     headers.setdefault("X-Content-Type-Options", "nosniff")
     headers.setdefault("X-Frame-Options", "DENY")
     if settings.SECURITY_REFERRER_POLICY:
@@ -234,8 +271,8 @@ def _apply_security_headers(headers: MutableHeaders) -> None:
         headers.setdefault(
             "Permissions-Policy", settings.SECURITY_PERMISSIONS_POLICY
         )
-    if settings.SECURITY_CSP:
-        headers.setdefault("Content-Security-Policy", settings.SECURITY_CSP)
+    if csp:
+        headers.setdefault("Content-Security-Policy", csp)
     if settings.SECURITY_HSTS_MAX_AGE > 0:
         value = f"max-age={settings.SECURITY_HSTS_MAX_AGE}"
         if settings.SECURITY_HSTS_INCLUDE_SUBDOMAINS:

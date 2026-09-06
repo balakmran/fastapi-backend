@@ -2,9 +2,12 @@ import os
 from enum import StrEnum
 from typing import Literal
 
+import structlog
 from pydantic import PostgresDsn, SecretStr, field_validator
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = structlog.get_logger(__name__)
 
 
 class Environment(StrEnum):
@@ -31,6 +34,18 @@ match env:
         env_file = ".env.production"
     case _:
         env_file = ".env"
+
+
+#: Development-only Host allow-list. A production boot that still
+#: carries these has not set `QUOIN_ALLOWED_HOSTS`, and would 400 every
+#: real request — see `validate_production_settings`.
+DEFAULT_ALLOWED_HOSTS = ("localhost", "127.0.0.1", "test", "*.orb.local")
+
+#: Development-only CORS origins, warned about on a production boot.
+DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://localhost:8000")
+
+#: Host substrings that mark an origin as local-development-only.
+_LOCAL_ORIGIN_MARKERS = ("localhost", "127.0.0.1", "[::1]")
 
 
 class Settings(BaseSettings):
@@ -105,11 +120,8 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
-    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "test", "*.orb.local"]
-    BACKEND_CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:8000",
-    ]
+    ALLOWED_HOSTS: list[str] = list(DEFAULT_ALLOWED_HOSTS)
+    BACKEND_CORS_ORIGINS: list[str] = list(DEFAULT_CORS_ORIGINS)
     BACKEND_CORS_ALLOW_METHODS: list[str] = [
         "GET",
         "POST",
@@ -137,7 +149,40 @@ class Settings(BaseSettings):
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https://cdn.simpleicons.org"
         " https://fastapi.tiangolo.com; "
+        "script-src 'self' https://cdn.jsdelivr.net; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'"
+    )
+    # Swagger UI bootstraps itself from an inline <script> that FastAPI
+    # generates and draws its toolbar icons from data: URIs, so /docs
+    # cannot be served under the default policy. Scoped to that one
+    # path by SecurityHeadersMiddleware, and moot in production, where
+    # the docs routes are not registered at all.
+    SECURITY_CSP_DOCS: str = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+        " https://cdn.jsdelivr.net; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https://cdn.simpleicons.org"
+        " https://fastapi.tiangolo.com; "
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'"
+    )
+    # ReDoc needs no inline script, but it renders anchor icons from
+    # data: URIs, pulls its "powered by" logo from cdn.redoc.ly, and
+    # builds its search index in a blob: worker (which falls back to
+    # script-src when worker-src is unset). Same path scoping, same
+    # production irrelevance, as SECURITY_CSP_DOCS above.
+    SECURITY_CSP_REDOC: str = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+        " https://cdn.jsdelivr.net; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https://cdn.simpleicons.org"
+        " https://fastapi.tiangolo.com https://cdn.redoc.ly; "
+        "script-src 'self' https://cdn.jsdelivr.net; "
+        "worker-src 'self' blob:; "
         "frame-ancestors 'none'; "
         "base-uri 'self'"
     )
@@ -154,6 +199,13 @@ class Settings(BaseSettings):
     OAUTH_ISSUER: str | None = None
     OAUTH_AUDIENCE: str | None = None
     OAUTH_ROLES_CLAIM: str = "roles"
+    # Role that bypasses every require_roles() check, and the switch
+    # that turns the bypass off for deployments whose IdP might issue
+    # this role name to callers that should not hold global authority.
+    # A separate flag rather than an empty role name, because
+    # `env_ignore_empty` above makes an empty env value mean "unset".
+    OAUTH_SUPERUSER_ROLE: str = "api.superuser"
+    OAUTH_SUPERUSER_ENABLED: bool = True
     # Minimum seconds between JWKS refetches triggered by an unknown
     # kid — bounds outbound calls when tokens with garbage kids are
     # sprayed (negative cache / backoff).
@@ -168,28 +220,49 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def validate_production_oauth(s: Settings = settings) -> None:
+def validate_production_settings(s: Settings = settings) -> None:
     """Fail fast on a misconfigured production deployment.
 
     In ``production`` the OAuth trust anchors must all be present and
     the JWKS endpoint must be ``https://`` — otherwise an on-path
-    attacker could substitute signing keys. Called from
-    ``create_app()`` (not on import) so the API server crash-loops on a
-    misconfigured boot while data-plane tooling that only imports
-    settings — Alembic migrations, scripts — is unaffected. Development
-    and test are no-ops.
+    attacker could substitute signing keys — and ``ALLOWED_HOSTS`` must
+    be set explicitly, because the development default rejects every
+    real Host with a 400 and so reads as an outage rather than as the
+    config error it is. Called from ``create_app()`` (not on import) so
+    the API server crash-loops on a misconfigured boot while data-plane
+    tooling that only imports settings — Alembic migrations, scripts —
+    is unaffected. Development and test are no-ops.
+
+    Localhost CORS origins are warned about rather than rejected: they
+    are a smell in production but harmless on their own, and a deployment
+    may legitimately keep one for a bastion.
 
     Args:
         s: The settings instance to validate (defaults to the module
             singleton; injectable for tests).
 
     Raises:
-        RuntimeError: If production is missing any OAuth trust anchor or
-            the JWKS URI is not ``https://``.
+        RuntimeError: If production is missing any OAuth trust anchor,
+            the JWKS URI is not ``https://``, or ``ALLOWED_HOSTS`` is
+            unset.
     """
     if s.ENV != Environment.production:
         return
 
+    _validate_production_oauth(s)
+    _validate_production_hosts(s)
+    _warn_on_local_cors_origins(s)
+
+
+def _validate_production_oauth(s: Settings) -> None:
+    """Require a complete, https OAuth trust anchor.
+
+    Args:
+        s: The settings instance to validate.
+
+    Raises:
+        RuntimeError: If a trust anchor is missing or JWKS is not https.
+    """
     missing = [
         name
         for name, value in (
@@ -208,4 +281,42 @@ def validate_production_oauth(s: Settings = settings) -> None:
         raise RuntimeError(
             "QUOIN_OAUTH_JWKS_URI must use https:// in production "
             "to prevent signing-key substitution."
+        )
+
+
+def _validate_production_hosts(s: Settings) -> None:
+    """Require an explicit Host allow-list in production.
+
+    Args:
+        s: The settings instance to validate.
+
+    Raises:
+        RuntimeError: If ``ALLOWED_HOSTS`` is empty or still the
+            development default.
+    """
+    if not s.ALLOWED_HOSTS or tuple(s.ALLOWED_HOSTS) == DEFAULT_ALLOWED_HOSTS:
+        raise RuntimeError(
+            "Production requires an explicit QUOIN_ALLOWED_HOSTS; the "
+            "development default rejects every real Host header with a "
+            "400. Set it to the hostnames this service is served on."
+        )
+
+
+def _warn_on_local_cors_origins(s: Settings) -> None:
+    """Log a warning for any localhost CORS origin in production.
+
+    Args:
+        s: The settings instance to inspect.
+    """
+    local = [
+        origin
+        for origin in s.BACKEND_CORS_ORIGINS
+        if any(marker in origin for marker in _LOCAL_ORIGIN_MARKERS)
+    ]
+    if local:
+        logger.warning(
+            "production_local_cors_origins",
+            origins=local,
+            hint="Set QUOIN_BACKEND_CORS_ORIGINS to the real browser "
+            "origins, or an empty list if no browser calls this API.",
         )

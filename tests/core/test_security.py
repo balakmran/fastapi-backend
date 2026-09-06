@@ -11,6 +11,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from httpx import Response
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
+from structlog.testing import capture_logs
 
 from app.core import security as security_module
 from app.core.exceptions import (
@@ -188,6 +189,51 @@ async def test_jwks_cache_refresh_skips_unknown_kty_keys() -> None:
     await cache._refresh(_fake_http_client(response=mock_response))
 
     assert cache._keys == {}
+
+
+async def test_jwks_cache_refresh_skips_malformed_key(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """A key the algorithm cannot parse is skipped, not fatal (S4).
+
+    One bad entry in the IdP's document used to raise out of _refresh
+    as a 500 — and because _fetched_at stayed unset, every request for
+    the whole backoff window re-raised it.
+    """
+    good = json.loads(RSAAlgorithm.to_jwk(rsa_public_key))
+    good["kid"] = "good-key"
+    good["use"] = "sig"
+    bad = {"kid": "bad-key", "kty": "RSA", "use": "sig", "n": "!!!"}
+    jwks_payload = {"keys": [bad, good]}
+
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = jwks_payload
+    mock_response.raise_for_status.return_value = None
+
+    cache = JWKSCache("http://example.com/jwks")
+    with capture_logs() as cap_logs:
+        await cache._refresh(_fake_http_client(response=mock_response))
+
+    assert set(cache._keys) == {"good-key"}
+    assert cache._fetched_at != float("-inf")
+    assert [log["kid"] for log in cap_logs] == ["bad-key"]
+
+
+async def test_jwks_cache_all_keys_malformed_yields_401() -> None:
+    """A document with no usable key is a 401, not a 500 loop (S4)."""
+    jwks_payload = {
+        "keys": [{"kid": "bad-key", "kty": "RSA", "use": "sig", "n": "!!!"}]
+    }
+
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = jwks_payload
+    mock_response.raise_for_status.return_value = None
+
+    cache = JWKSCache("http://example.com/jwks")
+    with pytest.raises(UnauthorizedError, match="signing key not found"):
+        await cache.get_signing_key(
+            "bad-key", _fake_http_client(response=mock_response)
+        )
 
 
 async def test_jwks_cache_refresh_propagates_transport_failure() -> None:
@@ -449,7 +495,8 @@ async def test_validate_token_expired(
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
     monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
-    token = _make_token(rsa_private_key, _make_claims(exp_offset=-1))
+    # Beyond the clock-skew leeway validate_token now allows.
+    token = _make_token(rsa_private_key, _make_claims(exp_offset=-3600))
     with pytest.raises(UnauthorizedError, match="expired"):
         await validate_token(token, _fake_http_client())
 
@@ -546,6 +593,60 @@ async def test_validate_token_generic_pyjwt_error(
             await validate_token(token, _fake_http_client())
 
 
+@pytest.mark.parametrize("claim", ["exp", "iat", "sub", "aud", "iss"])
+async def test_validate_token_requires_claim(
+    claim: str,
+    rsa_private_key: rsa.RSAPrivateKey,
+    rsa_public_key: rsa.RSAPublicKey,
+    mock_settings: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A token omitting any required claim is rejected (S1).
+
+    PyJWT verifies only the claims a token carries, so without
+    ``options["require"]`` a token with no ``exp`` never expires.
+    """
+    cache = MagicMock(spec=JWKSCache)
+    cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
+    monkeypatch.setattr(security_module, "_jwks_cache", cache)
+
+    claims = _make_claims()
+    del claims[claim]
+    token = _make_token(rsa_private_key, claims)
+    with pytest.raises(UnauthorizedError, match=f"required claim: {claim}"):
+        await validate_token(token, _fake_http_client())
+
+
+async def test_validate_token_allows_small_clock_skew(
+    rsa_private_key: rsa.RSAPrivateKey,
+    rsa_public_key: rsa.RSAPublicKey,
+    mock_settings: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A token expired within the leeway still validates (S1)."""
+    cache = MagicMock(spec=JWKSCache)
+    cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
+    monkeypatch.setattr(security_module, "_jwks_cache", cache)
+
+    token = _make_token(rsa_private_key, _make_claims(exp_offset=-1))
+    claims = await validate_token(token, _fake_http_client())
+    assert claims["sub"] == "svc-001"
+
+
+async def test_get_current_caller_rejects_empty_subject(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty sub is refused rather than authorizing as "" (S1)."""
+    monkeypatch.setattr(
+        security_module,
+        "settings",
+        MagicMock(OAUTH_ROLES_CLAIM="roles"),
+    )
+
+    with pytest.raises(UnauthorizedError, match="subject is empty"):
+        await get_current_caller(claims={"sub": "   ", "roles": []})
+
+
 async def test_get_current_caller_resolves_identity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -621,3 +722,52 @@ async def test_require_roles_superuser_bypass() -> None:
     check = require_roles("very.specific.role")
     result = await check(caller=caller)  # Should bypass and not raise
     assert result is caller
+
+
+async def test_require_roles_superuser_role_is_configurable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bypass follows QUOIN_OAUTH_SUPERUSER_ROLE (S3)."""
+    monkeypatch.setattr(
+        security_module,
+        "settings",
+        MagicMock(
+            OAUTH_SUPERUSER_ROLE="ops.break_glass",
+            OAUTH_SUPERUSER_ENABLED=True,
+        ),
+    )
+    caller = ServicePrincipal(
+        subject="svc", roles=["ops.break_glass"], claims={}
+    )
+    assert await require_roles("very.specific.role")(caller=caller) is caller
+
+
+async def test_require_roles_superuser_bypass_can_be_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """QUOIN_OAUTH_SUPERUSER_ENABLED=false removes the bypass (S3)."""
+    monkeypatch.setattr(
+        security_module,
+        "settings",
+        MagicMock(
+            OAUTH_SUPERUSER_ROLE="api.superuser",
+            OAUTH_SUPERUSER_ENABLED=False,
+        ),
+    )
+    caller = ServicePrincipal(subject="svc", roles=["api.superuser"], claims={})
+    with pytest.raises(ForbiddenError, match=r"very\.specific\.role"):
+        await require_roles("very.specific.role")(caller=caller)
+
+
+async def test_require_roles_ignores_an_unnamed_superuser_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty role name never matches, even when enabled (S3)."""
+    monkeypatch.setattr(
+        security_module,
+        "settings",
+        MagicMock(OAUTH_SUPERUSER_ROLE="", OAUTH_SUPERUSER_ENABLED=True),
+    )
+    caller = ServicePrincipal(subject="svc", roles=[""], claims={})
+    with pytest.raises(ForbiddenError, match=r"very\.specific\.role"):
+        await require_roles("very.specific.role")(caller=caller)
