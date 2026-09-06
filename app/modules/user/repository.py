@@ -149,11 +149,16 @@ class UserRepository:
         if is_active is not None:
             statement = statement.where(User.is_active == is_active)  # type: ignore
         if q:
-            pattern = f"%{q.lower()}%"
+            # autoescape=True escapes literal %, _, and the escape
+            # character itself in the search term, so a value like
+            # "100%" matches that literal substring instead of "100"
+            # followed by any characters — and `_` no longer matches
+            # any single character either.
+            term = q.lower()
             statement = statement.where(
                 or_(
-                    func.lower(User.email).like(pattern),
-                    func.lower(User.full_name).like(pattern),
+                    func.lower(User.email).contains(term, autoescape=True),
+                    func.lower(User.full_name).contains(term, autoescape=True),
                 )
             )
         return statement
