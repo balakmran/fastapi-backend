@@ -72,6 +72,12 @@ to adhere to the Principle of Least Privilege.
 Routes explicitly declare which role they require via `require_roles(...)`. There is no hidden baseline
 role — every route is perfectly self-documenting.
 
+The bypass role is a **setting**, not a constant. If your IdP could
+issue a role literally named `api.superuser` to callers who should not
+hold global authority, rename it with `QUOIN_OAUTH_SUPERUSER_ROLE`, or
+remove the bypass altogether with
+`QUOIN_OAUTH_SUPERUSER_ENABLED=false`.
+
 ### Token Validation
 
 Every request to a protected endpoint runs the following checks natively:
@@ -79,10 +85,24 @@ Every request to a protected endpoint runs the following checks natively:
 | Check | Source |
 | :--- | :--- |
 | Signature | JWKS from your OAuth server (cached with auto-rotation) |
-| Expiry | `exp` claim |
+| Required claims | `exp`, `iat`, `sub`, `aud`, `iss` must all be **present** |
+| Expiry | `exp` claim, with 10 s of clock-skew leeway |
 | Audience | `aud` == `QUOIN_OAUTH_AUDIENCE` |
 | Issuer | `iss` == `QUOIN_OAUTH_ISSUER` |
+| Subject | `sub` is non-empty after trimming |
 | Role | `roles` contains the specifically requested `[domain].[action]` |
+
+!!! warning "Presence is checked, not just validity"
+    PyJWT verifies only the claims a token actually carries. Without
+    `options["require"]`, a token minted with **no `exp`** would be
+    accepted forever, and one with no `sub` would resolve to a
+    `ServicePrincipal` with an empty subject. QuoinAPI therefore
+    requires all five claims explicitly; a token missing any of them is
+    a `401` naming the claim.
+
+    If your IdP genuinely omits one — some legacy servers skip `iat` —
+    adjust `_REQUIRED_CLAIMS` in `app/core/security.py`. Do not remove
+    `exp`.
 
 ---
 
@@ -99,7 +119,7 @@ sequenceDiagram
     CS->>QA: Bearer <JWT>
     QA->>OS: GET /jwks (cached)
     OS-->>QA: public keys
-    Note over QA: validate sig / exp / aud<br/>check roles claim
+    Note over QA: validate sig / required claims<br/>exp / aud / iss, then roles
     QA-->>CS: 200 OK
 ```
 
@@ -118,6 +138,10 @@ QUOIN_OAUTH_AUDIENCE=api://{your-app-client-id}
 # Claim key — defaults work for Azure AD; adjust for other providers
 QUOIN_OAUTH_ROLES_CLAIM=roles
 
+# Global-bypass role, and the switch that removes the bypass entirely
+QUOIN_OAUTH_SUPERUSER_ROLE=api.superuser
+QUOIN_OAUTH_SUPERUSER_ENABLED=True
+
 # Backoff: min seconds between JWKS refetches for an unknown kid
 QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
 ```
@@ -128,6 +152,8 @@ QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
 | `QUOIN_OAUTH_ISSUER` | Expected `iss` claim | `None` |
 | `QUOIN_OAUTH_AUDIENCE` | Expected `aud` claim | `None` |
 | `QUOIN_OAUTH_ROLES_CLAIM` | Claim key holding app roles | `roles` |
+| `QUOIN_OAUTH_SUPERUSER_ROLE` | Role that bypasses every `require_roles()` check | `api.superuser` |
+| `QUOIN_OAUTH_SUPERUSER_ENABLED` | Whether the bypass applies at all | `true` |
 | `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS` | Min seconds between JWKS refetches triggered by an unknown `kid` | `30.0` |
 
 !!! warning "All three trust anchors are required"

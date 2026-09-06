@@ -4,11 +4,13 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import SecretStr
+from structlog.testing import capture_logs
 
 from app.core.config import (
+    DEFAULT_ALLOWED_HOSTS,
     Environment,
     Settings,
-    validate_production_oauth,
+    validate_production_settings,
 )
 
 
@@ -137,13 +139,15 @@ def test_database_url_construction() -> None:
 
 
 def _prod(**overrides: object) -> Settings:
-    """Build a production Settings with OAuth overrides, no env file."""
+    """Build a valid production Settings, no env file."""
     base: dict[str, object] = {
         "_env_file": None,
         "ENV": Environment.production,
         "OAUTH_JWKS_URI": "https://issuer.example/jwks",
         "OAUTH_ISSUER": "https://issuer.example",
         "OAUTH_AUDIENCE": "api",
+        "ALLOWED_HOSTS": ["api.example.com"],
+        "BACKEND_CORS_ORIGINS": ["https://app.example.com"],
     }
     base.update(overrides)
     return Settings(**base)  # type: ignore
@@ -152,7 +156,7 @@ def _prod(**overrides: object) -> Settings:
 def test_production_oauth_fully_configured_boots() -> None:
     """A fully-configured production profile validates clean (S3)."""
     with patch.dict(os.environ, {}, clear=True):
-        validate_production_oauth(_prod())  # no raise
+        validate_production_settings(_prod())  # no raise
 
 
 @pytest.mark.parametrize(
@@ -163,23 +167,106 @@ def test_production_missing_oauth_crash_loops(missing: str) -> None:
     """Production fails fast when any OAuth trust anchor is unset (S3)."""
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(RuntimeError, match=missing):
-            validate_production_oauth(_prod(**{missing: None}))
+            validate_production_settings(_prod(**{missing: None}))
 
 
 def test_production_requires_https_jwks() -> None:
     """Production rejects a non-https JWKS URI (S7)."""
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(RuntimeError, match="https"):
-            validate_production_oauth(
+            validate_production_settings(
                 _prod(OAUTH_JWKS_URI="http://issuer.example/jwks")
             )
+
+
+def test_production_requires_explicit_allowed_hosts() -> None:
+    """Production rejects the development Host allow-list (S5)."""
+    with patch.dict(os.environ, {}, clear=True):
+        with pytest.raises(RuntimeError, match="QUOIN_ALLOWED_HOSTS"):
+            validate_production_settings(
+                _prod(ALLOWED_HOSTS=list(DEFAULT_ALLOWED_HOSTS))
+            )
+
+
+def test_production_rejects_empty_allowed_hosts() -> None:
+    """An empty Host allow-list is a config error, not a lockdown (S5)."""
+    with patch.dict(os.environ, {}, clear=True):
+        with pytest.raises(RuntimeError, match="QUOIN_ALLOWED_HOSTS"):
+            validate_production_settings(_prod(ALLOWED_HOSTS=[]))
+
+
+def test_production_warns_on_localhost_cors_origin() -> None:
+    """Localhost CORS origins warn in production but still boot (S5)."""
+    with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
+        validate_production_settings(
+            _prod(
+                BACKEND_CORS_ORIGINS=[
+                    "https://app.example.com",
+                    "http://localhost:3000",
+                ]
+            )
+        )
+    warnings = [
+        log
+        for log in cap_logs
+        if log["event"] == "production_local_cors_origins"
+    ]
+    assert len(warnings) == 1
+    assert warnings[0]["origins"] == ["http://localhost:3000"]
+
+
+def test_production_silent_on_remote_cors_origins() -> None:
+    """A production-only CORS list emits no warning (S5)."""
+    with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
+        validate_production_settings(_prod())
+    assert not [
+        log
+        for log in cap_logs
+        if log["event"] == "production_local_cors_origins"
+    ]
+
+
+def test_superuser_bypass_is_configurable() -> None:
+    """The bypass role and its on/off switch are both settings (S3).
+
+    A flag rather than an empty role name because `env_ignore_empty`
+    makes an empty env value mean "unset", not "disabled".
+    """
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)  # type: ignore
+        assert settings.OAUTH_SUPERUSER_ROLE == "api.superuser"
+        assert settings.OAUTH_SUPERUSER_ENABLED is True
+    with patch.dict(
+        os.environ,
+        {
+            "QUOIN_OAUTH_SUPERUSER_ROLE": "ops.break_glass",
+            "QUOIN_OAUTH_SUPERUSER_ENABLED": "false",
+        },
+        clear=True,
+    ):
+        settings = Settings(_env_file=None)  # type: ignore
+        assert settings.OAUTH_SUPERUSER_ROLE == "ops.break_glass"
+        assert settings.OAUTH_SUPERUSER_ENABLED is False
+
+
+def test_default_csp_forbids_inline_scripts() -> None:
+    """The default policy allows no inline script; only /docs does (S6)."""
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)  # type: ignore
+    script_src = next(
+        d
+        for d in settings.SECURITY_CSP.split("; ")
+        if d.startswith("script-src")
+    )
+    assert "'unsafe-inline'" not in script_src
+    assert "'unsafe-inline'" in settings.SECURITY_CSP_DOCS
 
 
 def test_development_skips_oauth_validation() -> None:
     """Development is a no-op even with no OAuth configured (S3)."""
     with patch.dict(os.environ, {}, clear=True):
         settings = Settings(_env_file=None, ENV=Environment.development)  # type: ignore
-        validate_production_oauth(settings)  # no raise
+        validate_production_settings(settings)  # no raise
         assert settings.OAUTH_ISSUER is None
 
 

@@ -109,7 +109,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_REQUEST_TIMEOUT_SECONDS` | Per-request wall-clock timeout (0 = disabled)    | `30.0`                                              |
 | `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` | Max seconds to drain in-flight requests on shutdown (`<=0` = no wait) | `30.0`                          |
 | `QUOIN_REQUEST_ID_HEADER`    | Header name for request ID propagation              | `X-Request-ID`                                      |
-| `QUOIN_ALLOWED_HOSTS`        | Trusted host list                                   | `["localhost", "127.0.0.1", "test", "*.orb.local"]`  |
+| `QUOIN_ALLOWED_HOSTS`        | Trusted host list (**required in production**)      | `["localhost", "127.0.0.1", "test", "*.orb.local"]`  |
 | `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins (empty = CORS disabled)        | `["http://localhost:3000", "http://localhost:8000"]` |
 | `QUOIN_BACKEND_CORS_ALLOW_METHODS` | Allowed HTTP methods for CORS                 | `["GET","POST","PUT","PATCH","DELETE","OPTIONS"]`    |
 | `QUOIN_BACKEND_CORS_ALLOW_HEADERS` | Allowed request headers for CORS             | `["Authorization","Content-Type","X-Request-ID"]`   |
@@ -119,20 +119,25 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_SECURITY_HSTS_INCLUDE_SUBDOMAINS` | Add `includeSubDomains` to HSTS         | `true`                                              |
 | `QUOIN_SECURITY_HSTS_PRELOAD` | Add `preload` to HSTS header                       | `false`                                             |
 | `QUOIN_SECURITY_CSP`         | `Content-Security-Policy` header value              | See [Security guide](security.md#content-security-policy) |
+| `QUOIN_SECURITY_CSP_DOCS`    | `Content-Security-Policy` for `/docs` only          | See [Security guide](security.md#content-security-policy) |
+| `QUOIN_SECURITY_CSP_REDOC`   | `Content-Security-Policy` for `/redoc` only         | See [Security guide](security.md#content-security-policy) |
 | `QUOIN_SECURITY_REFERRER_POLICY` | `Referrer-Policy` header value                  | `strict-origin-when-cross-origin`                   |
 | `QUOIN_SECURITY_PERMISSIONS_POLICY` | `Permissions-Policy` header value            | `geolocation=(), camera=(), microphone=()`          |
 | `QUOIN_MAX_REQUEST_BODY_BYTES` | Max request body size in bytes (`<=0` = disabled) | `1048576` (1 MiB)                                   |
 | `QUOIN_HTTP_TIMEOUT_SECONDS` | Outbound request timeout in seconds (all phases)   | `10.0`                                              |
 | `QUOIN_HTTP_RETRY_ATTEMPTS`  | Total attempts per outbound call (`1` = no retry)  | `3`                                                 |
 
-The five `QUOIN_OAUTH_*` settings are deliberately not repeated here —
+The seven `QUOIN_OAUTH_*` settings are deliberately not repeated here —
 they only make sense alongside the token-validation rules they drive.
 See the [Authentication guide](authentication.md#configuration) for
 `QUOIN_OAUTH_JWKS_URI`, `QUOIN_OAUTH_ISSUER`, `QUOIN_OAUTH_AUDIENCE`,
-`QUOIN_OAUTH_ROLES_CLAIM`, and
+`QUOIN_OAUTH_ROLES_CLAIM`, `QUOIN_OAUTH_SUPERUSER_ROLE`,
+`QUOIN_OAUTH_SUPERUSER_ENABLED`, and
 `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS`. All three trust anchors are
 **required in production** — `create_app()` refuses to boot without
-them.
+them, and so is `QUOIN_ALLOWED_HOSTS`: the development default rejects
+every real `Host` header with a 400, which reads as an outage rather
+than as the config error it is.
 
 Finer backoff and circuit-breaker tuning are module constants in
 [`app/http/client.py`](../../app/http/client.py) rather than settings; the

@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 import jwt
+import structlog
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
@@ -20,6 +21,20 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.http.client import ResilientHTTPClient, get_http_client
+
+logger = structlog.get_logger(__name__)
+
+#: Claims a token must carry, not merely satisfy when present. PyJWT
+#: only verifies claims that exist, so without ``require`` a token with
+#: no ``exp`` never expires and one with no ``sub`` yields an anonymous
+#: principal.
+_REQUIRED_CLAIMS = ["exp", "iat", "sub", "aud", "iss"]
+
+#: Seconds of clock skew tolerated on ``exp``/``iat``/``nbf``. Small
+#: enough that an expired token is not usefully extended, large enough
+#: that an IdP a few seconds ahead of this host does not mint tokens
+#: that fail on arrival.
+_CLOCK_SKEW_LEEWAY_SECONDS = 10
 
 # ---------------------------------------------------------------------------
 # JWKS Cache
@@ -106,10 +121,24 @@ class JWKSCache:
                 continue
             kid = key_data.get("kid", "")
             kty = key_data.get("kty")
-            if kty == "RSA":
-                keys[kid] = RSAAlgorithm.from_jwk(key_data)
-            elif kty == "EC":
-                keys[kid] = ECAlgorithm.from_jwk(key_data)
+            if kty not in ("RSA", "EC"):
+                continue
+            # Parse per key: one malformed entry in the IdP's document
+            # must not take down every other key in it. Raising here
+            # would escape as a 500 *and* leave ``_fetched_at`` unset,
+            # so every request for the next backoff window would re-raise.
+            try:
+                if kty == "RSA":
+                    keys[kid] = RSAAlgorithm.from_jwk(key_data)
+                else:
+                    keys[kid] = ECAlgorithm.from_jwk(key_data)
+            except Exception as exc:
+                logger.warning(
+                    "jwks_key_unparseable",
+                    kid=kid,
+                    kty=kty,
+                    error=repr(exc),
+                )
         self._keys = keys
         self._fetched_at = time.monotonic()
 
@@ -215,7 +244,9 @@ async def validate_token(
 ) -> dict[str, Any]:
     """Validate a Bearer JWT against the configured OAuth server.
 
-    Checks signature (via JWKS), expiry, audience, and issuer.
+    Checks the signature (via JWKS) and requires — not merely
+    verifies-if-present — ``exp``, ``iat``, ``sub``, ``aud``, and
+    ``iss``.
 
     Args:
         token: Raw JWT string (without "Bearer " prefix).
@@ -255,6 +286,7 @@ async def validate_token(
     decode_options: dict[str, Any] = {
         "verify_exp": True,
         "verify_aud": True,
+        "require": _REQUIRED_CLAIMS,
     }
 
     try:
@@ -264,8 +296,13 @@ async def validate_token(
             algorithms=["RS256", "ES256"],
             audience=settings.OAUTH_AUDIENCE,
             issuer=settings.OAUTH_ISSUER,
+            leeway=_CLOCK_SKEW_LEEWAY_SECONDS,
             options=decode_options,  # type: ignore
         )
+    except jwt.MissingRequiredClaimError as exc:
+        raise UnauthorizedError(
+            f"Token is missing the required claim: {exc.claim}"
+        ) from exc
     except jwt.ExpiredSignatureError as exc:
         raise UnauthorizedError("Token has expired") from exc
     except jwt.InvalidAudienceError as exc:
@@ -317,10 +354,33 @@ async def get_current_caller(
 
     Returns:
         ServicePrincipal with subject, roles, and claims.
+
+    Raises:
+        UnauthorizedError: If ``sub`` is present but empty — an
+            identity that would authorize as the empty string.
     """
-    subject = claims.get("sub", "")
+    subject = str(claims.get("sub", "")).strip()
+    if not subject:
+        raise UnauthorizedError("Token subject is empty")
     roles = extract_roles(claims)
     return ServicePrincipal(subject=subject, roles=roles, claims=claims)
+
+
+def _is_superuser(caller: ServicePrincipal) -> bool:
+    """Return whether the caller holds the configured bypass role.
+
+    Args:
+        caller: The resolved calling principal.
+
+    Returns:
+        True if the bypass is enabled, named, and held by the caller.
+    """
+    superuser = settings.OAUTH_SUPERUSER_ROLE
+    return bool(
+        settings.OAUTH_SUPERUSER_ENABLED
+        and superuser
+        and superuser in caller.roles
+    )
 
 
 def require_roles(*roles: str) -> Callable[..., Any]:
@@ -337,6 +397,12 @@ def require_roles(*roles: str) -> Callable[..., Any]:
             ],
         ) -> None: ...
 
+    A caller holding ``QUOIN_OAUTH_SUPERUSER_ROLE`` (default
+    ``api.superuser``) bypasses every check. Set
+    ``QUOIN_OAUTH_SUPERUSER_ENABLED=false`` to remove the bypass
+    entirely — worth doing if the IdP is shared and could issue a role
+    by that name to callers that should not hold global authority.
+
     Args:
         *roles: One or more role names that the caller must hold.
 
@@ -349,7 +415,7 @@ def require_roles(*roles: str) -> Callable[..., Any]:
         caller: ServicePrincipal = Depends(get_current_caller),
     ) -> ServicePrincipal:
         """Check that the caller holds all required roles."""
-        if "api.superuser" in caller.roles:
+        if _is_superuser(caller):
             return caller
 
         missing = [r for r in roles if r not in caller.roles]

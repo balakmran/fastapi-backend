@@ -4,6 +4,17 @@
 
 ### Added
 
+- **Security**: `QUOIN_OAUTH_SUPERUSER_ROLE` and
+  `QUOIN_OAUTH_SUPERUSER_ENABLED` make the `require_roles()` global
+  bypass configurable — rename it, or switch it off, if your IdP could
+  issue a role named `api.superuser` to callers who should not hold
+  global authority. Defaults preserve the previous behaviour.
+- **Security**: `QUOIN_SECURITY_CSP_DOCS` and
+  `QUOIN_SECURITY_CSP_REDOC` are applied to `/docs` and `/redoc` alone,
+  so the default `QUOIN_SECURITY_CSP` no longer needs
+  `'unsafe-inline'` in `script-src`, nor `data:`, `blob:`, or
+  `cdn.redoc.ly` for the doc UIs. Both doc routes are unregistered in
+  production, so neither relaxed policy is emitted there.
 - **OpenAPI**: `DEFAULT_ERROR_RESPONSES` and `error_responses()` in
   `app/core/openapi.py` centralize RFC 9457 error declarations. Module
   routers carry the default set (401, 403, 422, 500); routes add their
@@ -29,6 +40,36 @@
   but an unrecognised level now fails at startup rather than being
   silently ignored. A bare `ENV` (no `QUOIN_` prefix) no longer selects
   a different `.env` file or diverges from `Settings.ENV`.
+- **Security**: `validate_token` now *requires* `exp`, `iat`, `sub`,
+  `aud`, and `iss` rather than verifying only the claims a token
+  happens to carry — a token minted without `exp` was previously
+  accepted forever. `exp`/`iat` allow 10 s of clock skew, and a token
+  whose `sub` is empty is rejected instead of resolving to a
+  `ServicePrincipal` with an empty subject.
+- **Security**: one malformed key in the IdP's JWKS document no longer
+  raises out of the cache refresh as a 500 — and, because the fetch
+  timestamp went unset, re-raises for the whole backoff window. Keys
+  are parsed individually, bad ones are logged and skipped, and a
+  document with no usable key falls to the existing "signing key not
+  found" 401.
+- **Security**: production boot validation is no longer OAuth-only.
+  `validate_production_oauth()` is now
+  `validate_production_settings()` and additionally requires an
+  explicit `QUOIN_ALLOWED_HOSTS` — the development default rejects
+  every real `Host` with a 400, which reads as an outage rather than a
+  config error — and warns on `localhost` CORS origins.
+  **Manual reconciliation**: rename the call if you import it, and set
+  `QUOIN_ALLOWED_HOSTS` in your production environment.
+- **Security**: the landing page's inline `<script>` moved to
+  `app/static/js/home.js`, letting the default CSP drop
+  `'unsafe-inline'` from `script-src` on every path but the two doc
+  UIs, which are served under their own policies.
+- **Security**: `/redoc` and `/docs` no longer log CSP violations.
+  ReDoc's `data:` anchor icons, its `cdn.redoc.ly` logo, and its
+  `blob:` search worker were all being blocked — the worker silently,
+  because an unset `worker-src` falls back to `script-src`, where
+  `blob:` never matched. Swagger UI's `data:` toolbar icons were
+  blocked the same way. Both predate the `script-src` tightening above.
 - **Users**: `get_by_email` now matches case-insensitively via
   `lower(email)` (with a migration backfilling legacy mixed-case rows),
   and the `q` search filter matches `%`/`_` literally instead of as SQL
