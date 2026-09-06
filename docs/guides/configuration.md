@@ -13,7 +13,12 @@ The application supports three environments with automatic `.env` file selection
 | Production  | `production`            | `.env.production` | Production deployment |
 
 The environment is determined at startup from the `QUOIN_ENV` environment
-variable, with `ENV` as a fallback for backward compatibility.
+variable only. A bare `ENV` (no prefix) is deliberately **not** read for
+this — an unprefixed variable is ignored everywhere else in this
+project (see below), and a fallback here would let `ENV=production`
+select `.env.production` while `Settings.ENV` itself stayed at its
+`development` default, silently skipping the production fail-fast
+checks and the `/docs`/`/openapi.json` disable guard.
 
 ## Environment Variable Prefix
 
