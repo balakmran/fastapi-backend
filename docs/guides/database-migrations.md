@@ -126,7 +126,18 @@ All commands are wrapped in the [`justfile`](https://github.com/balakmran/quoin-
 | `just migrate-gen "msg"` | `alembic revision --autogenerate -m "msg"` | Generate migration           |
 | `just migrate-up`        | `alembic upgrade head`                     | Apply all pending migrations |
 | `just migrate-down`      | `alembic downgrade -1`                     | Rollback last migration      |
+| `just migrate-check`     | `alembic upgrade head && alembic check`    | Fail if a model change has no migration |
 | `just reset-db`          | (stop, restart, apply)                     | Reset database completely    |
+
+`just migrate-check` runs as part of `just check` (and so gates every
+PR): it upgrades the database to `head` and then asks Alembic to
+autogenerate against the current models. Any difference — a column,
+index, server default, or `nullable` change made in `models.py` without
+a matching migration — fails the build with the pending operations
+Alembic would have generated. The migration-backed test schema (see
+[Testing](testing.md)) catches a *missing column* already; `alembic
+check` catches the finer-grained drift that a full-table comparison
+misses, such as an index or a default added to an existing column.
 
 !!! note
     `migrate-history` and `migrate-current` are not wrapped in `just`.

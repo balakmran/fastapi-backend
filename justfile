@@ -104,6 +104,11 @@ migrate-up:
 migrate-down:
     uv run alembic downgrade -1
 
+# Verify no model change is missing its migration (used by `just check`)
+migrate-check: _db-check
+    uv run alembic upgrade head
+    uv run alembic check
+
 # Reset the database (stop, restart, and re-apply migrations)
 reset-db:
     docker compose down -v
@@ -169,6 +174,10 @@ check:
     @echo "Running type checker..."
     @echo "-----------------------------"
     @just typecheck
+    @echo ""
+    @echo "Checking for missing migrations..."
+    @echo "-----------------------------"
+    @just migrate-check
     @echo ""
     @echo "Running tests..."
     @echo "-----------------------------"
