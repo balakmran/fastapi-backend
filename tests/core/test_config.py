@@ -24,7 +24,7 @@ def test_environment_enum_values() -> None:
 def test_settings_defaults() -> None:
     """Test Settings default values."""
     with patch.dict(os.environ, {}, clear=True):
-        settings = Settings(_env_file=None)  # type: ignore
+        settings = Settings(_env_file=None)
         assert settings.ENV == Environment.development
         assert settings.LOG_LEVEL == "INFO"
         assert settings.OTEL_ENABLED is True
@@ -35,7 +35,7 @@ def test_settings_defaults() -> None:
 def test_db_pool_defaults() -> None:
     """Connection-pool settings expose the previous engine literals."""
     with patch.dict(os.environ, {}, clear=True):
-        settings = Settings(_env_file=None)  # type: ignore
+        settings = Settings(_env_file=None)
         assert settings.DB_POOL_SIZE == 20  # noqa: PLR2004
         assert settings.DB_MAX_OVERFLOW == 10  # noqa: PLR2004
         assert settings.DB_POOL_TIMEOUT == 30.0  # noqa: PLR2004
@@ -233,7 +233,7 @@ def test_superuser_bypass_is_configurable() -> None:
     makes an empty env value mean "unset", not "disabled".
     """
     with patch.dict(os.environ, {}, clear=True):
-        settings = Settings(_env_file=None)  # type: ignore
+        settings = Settings(_env_file=None)
         assert settings.OAUTH_SUPERUSER_ROLE == "api.superuser"
         assert settings.OAUTH_SUPERUSER_ENABLED is True
     with patch.dict(
@@ -244,7 +244,7 @@ def test_superuser_bypass_is_configurable() -> None:
         },
         clear=True,
     ):
-        settings = Settings(_env_file=None)  # type: ignore
+        settings = Settings(_env_file=None)
         assert settings.OAUTH_SUPERUSER_ROLE == "ops.break_glass"
         assert settings.OAUTH_SUPERUSER_ENABLED is False
 
@@ -252,7 +252,7 @@ def test_superuser_bypass_is_configurable() -> None:
 def test_default_csp_forbids_inline_scripts() -> None:
     """The default policy allows no inline script; only /docs does (S6)."""
     with patch.dict(os.environ, {}, clear=True):
-        settings = Settings(_env_file=None)  # type: ignore
+        settings = Settings(_env_file=None)
     script_src = next(
         d
         for d in settings.SECURITY_CSP.split("; ")
@@ -265,7 +265,7 @@ def test_default_csp_forbids_inline_scripts() -> None:
 def test_development_skips_oauth_validation() -> None:
     """Development is a no-op even with no OAuth configured (S3)."""
     with patch.dict(os.environ, {}, clear=True):
-        settings = Settings(_env_file=None, ENV=Environment.development)  # type: ignore
+        settings = Settings(_env_file=None, ENV=Environment.development)
         validate_production_settings(settings)  # no raise
         assert settings.OAUTH_ISSUER is None
 
@@ -273,7 +273,7 @@ def test_development_skips_oauth_validation() -> None:
 def test_unknown_quoin_var_is_ignored() -> None:
     """A mistyped QUOIN_* var is dropped, not accepted as extra (S5)."""
     with patch.dict(os.environ, {"QUOIN_OAUTH_JWKS_URL": "typo"}, clear=True):
-        settings = Settings(_env_file=None)  # type: ignore
+        settings = Settings(_env_file=None)
         # The real setting keeps its default; the typo is not attached.
         assert settings.OAUTH_JWKS_URI is None
         assert not hasattr(settings, "OAUTH_JWKS_URL")
@@ -283,7 +283,7 @@ def test_password_is_secret_and_url_redacted() -> None:
     """Password is a SecretStr and DATABASE_URL never dumps (S4)."""
     with patch.dict(os.environ, {}, clear=True):
         settings = Settings(
-            _env_file=None,  # type: ignore
+            _env_file=None,
             POSTGRES_PASSWORD=SecretStr("topsecret"),
         )
         assert isinstance(settings.POSTGRES_PASSWORD, SecretStr)
