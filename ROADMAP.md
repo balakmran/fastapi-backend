@@ -153,6 +153,22 @@ Once complete, move this checklist to the release notes and replace the
 
 ---
 
+## Known Correctness Issues
+
+A confirmed bug fits neither the launch checklist above (a one-time
+release gate) nor the backlog below (demand-gated features) — without
+a lane of its own it tends to get triaged as one or the other and
+lost. This table is that lane: add a row when a review or an incident
+confirms a correctness bug that isn't fixed in the same change, and
+remove the row once the fix ships (credit it in `CHANGELOG.md`
+instead). Empty is the steady state, not a gap in review.
+
+| Status | Issue | Found |
+| :----- | :---- | :---- |
+| — | *(none currently open)* | — |
+
+---
+
 ## Backlog
 
 Documented now so they aren't lost. Promoted into a milestone only when
