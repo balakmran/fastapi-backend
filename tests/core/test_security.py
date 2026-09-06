@@ -2,6 +2,7 @@
 
 import json
 import time
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,6 +25,7 @@ from app.core.security import (
     ServicePrincipal,
     extract_roles,
     get_current_caller,
+    get_jwks_cache,
     require_roles,
     validate_token,
 )
@@ -376,33 +378,41 @@ def test_jwks_cache_init_records_min_refresh() -> None:
 def test_get_jwks_cache_no_uri_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_get_jwks_cache raises UnauthorizedError when no JWKS URI is set."""
+    """get_jwks_cache raises UnauthorizedError when no JWKS URI is set."""
     monkeypatch.setattr(
         security_module,
         "settings",
         MagicMock(OAUTH_JWKS_URI=None),
     )
-    monkeypatch.setattr(security_module, "_jwks_cache", None)
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
 
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_JWKS_URI"):
-        security_module._get_jwks_cache()
+        get_jwks_cache(request)  # type: ignore
 
 
-def test_get_jwks_cache_creates_instance(
+def test_get_jwks_cache_creates_and_stores_instance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_get_jwks_cache creates and stores a JWKSCache when one doesn't exist."""
+    """get_jwks_cache creates a JWKSCache and stores it on app.state."""
     monkeypatch.setattr(
         security_module,
         "settings",
-        MagicMock(OAUTH_JWKS_URI="http://example.com/jwks"),
+        MagicMock(
+            OAUTH_JWKS_URI="http://example.com/jwks",
+            OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0,
+        ),
     )
-    monkeypatch.setattr(security_module, "_jwks_cache", None)
+    state = SimpleNamespace()
+    request = SimpleNamespace(app=SimpleNamespace(state=state))
 
-    cache = security_module._get_jwks_cache()
+    cache = get_jwks_cache(request)  # type: ignore
 
     assert isinstance(cache, JWKSCache)
     assert cache._uri == "http://example.com/jwks"
+    # Stored on app.state so the next call reuses the same instance
+    # rather than dropping and refetching the keys (S2/Improvement 6).
+    assert state.jwks_cache is cache
+    assert get_jwks_cache(request) is cache  # type: ignore
 
 
 def test_extract_roles_array(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -464,7 +474,6 @@ def mock_settings(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         OAUTH_ADMIN_ROLE="api.admin",
     )
     monkeypatch.setattr(security_module, "settings", s)
-    monkeypatch.setattr(security_module, "_jwks_cache", None)
     return s
 
 
@@ -477,10 +486,9 @@ async def test_validate_token_success(
     """Valid token returns decoded claims."""
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     token = _make_token(rsa_private_key, _make_claims())
-    claims = await validate_token(token, _fake_http_client())
+    claims = await validate_token(token, _fake_http_client(), cache)
     assert claims["sub"] == "svc-001"
 
 
@@ -493,12 +501,11 @@ async def test_validate_token_expired(
     """Expired token raises UnauthorizedError."""
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     # Beyond the clock-skew leeway validate_token now allows.
     token = _make_token(rsa_private_key, _make_claims(exp_offset=-3600))
     with pytest.raises(UnauthorizedError, match="expired"):
-        await validate_token(token, _fake_http_client())
+        await validate_token(token, _fake_http_client(), cache)
 
 
 async def test_validate_token_wrong_audience(
@@ -510,11 +517,10 @@ async def test_validate_token_wrong_audience(
     """Token with wrong audience raises UnauthorizedError."""
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     token = _make_token(rsa_private_key, _make_claims(aud="wrong-audience"))
     with pytest.raises(UnauthorizedError, match="audience"):
-        await validate_token(token, _fake_http_client())
+        await validate_token(token, _fake_http_client(), cache)
 
 
 async def test_validate_token_wrong_issuer(
@@ -526,11 +532,10 @@ async def test_validate_token_wrong_issuer(
     """Token with wrong issuer raises UnauthorizedError."""
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     token = _make_token(rsa_private_key, _make_claims(iss="http://evil-issuer"))
     with pytest.raises(UnauthorizedError, match="issuer"):
-        await validate_token(token, _fake_http_client())
+        await validate_token(token, _fake_http_client(), cache)
 
 
 async def test_validate_token_no_uri(
@@ -540,7 +545,11 @@ async def test_validate_token_no_uri(
     """validate_token raises UnauthorizedError if no JWKS URI is set."""
     mock_settings.OAUTH_JWKS_URI = ""
     with pytest.raises(UnauthorizedError, match="not configured"):
-        await validate_token("header.payload.signature", _fake_http_client())
+        await validate_token(
+            "header.payload.signature",
+            _fake_http_client(),
+            MagicMock(spec=JWKSCache),
+        )
 
 
 async def test_validate_token_no_audience(
@@ -549,7 +558,11 @@ async def test_validate_token_no_audience(
     """validate_token raises UnauthorizedError if audience is not set."""
     mock_settings.OAUTH_AUDIENCE = ""
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_AUDIENCE"):
-        await validate_token("header.payload.signature", _fake_http_client())
+        await validate_token(
+            "header.payload.signature",
+            _fake_http_client(),
+            MagicMock(spec=JWKSCache),
+        )
 
 
 async def test_validate_token_no_issuer(
@@ -561,7 +574,11 @@ async def test_validate_token_no_issuer(
     """
     mock_settings.OAUTH_ISSUER = ""
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_ISSUER"):
-        await validate_token("header.payload.signature", _fake_http_client())
+        await validate_token(
+            "header.payload.signature",
+            _fake_http_client(),
+            MagicMock(spec=JWKSCache),
+        )
 
 
 async def test_validate_token_malformed(
@@ -569,7 +586,9 @@ async def test_validate_token_malformed(
 ) -> None:
     """Malformed token string raises UnauthorizedError."""
     with pytest.raises(UnauthorizedError, match="Invalid token format"):
-        await validate_token("not.a.jwt", _fake_http_client())
+        await validate_token(
+            "not.a.jwt", _fake_http_client(), MagicMock(spec=JWKSCache)
+        )
 
 
 async def test_validate_token_generic_pyjwt_error(
@@ -581,7 +600,6 @@ async def test_validate_token_generic_pyjwt_error(
     """Generic PyJWTError is caught and raised as UnauthorizedError."""
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     token = _make_token(rsa_private_key, _make_claims())
     with patch.object(
@@ -590,7 +608,7 @@ async def test_validate_token_generic_pyjwt_error(
         side_effect=jwt.PyJWTError("unexpected error"),
     ):
         with pytest.raises(UnauthorizedError, match="Token validation failed"):
-            await validate_token(token, _fake_http_client())
+            await validate_token(token, _fake_http_client(), cache)
 
 
 @pytest.mark.parametrize("claim", ["exp", "iat", "sub", "aud", "iss"])
@@ -608,13 +626,12 @@ async def test_validate_token_requires_claim(
     """
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     claims = _make_claims()
     del claims[claim]
     token = _make_token(rsa_private_key, claims)
     with pytest.raises(UnauthorizedError, match=f"required claim: {claim}"):
-        await validate_token(token, _fake_http_client())
+        await validate_token(token, _fake_http_client(), cache)
 
 
 async def test_validate_token_allows_small_clock_skew(
@@ -626,10 +643,9 @@ async def test_validate_token_allows_small_clock_skew(
     """A token expired within the leeway still validates (S1)."""
     cache = MagicMock(spec=JWKSCache)
     cache.get_signing_key = AsyncMock(return_value=rsa_public_key)
-    monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     token = _make_token(rsa_private_key, _make_claims(exp_offset=-1))
-    claims = await validate_token(token, _fake_http_client())
+    claims = await validate_token(token, _fake_http_client(), cache)
     assert claims["sub"] == "svc-001"
 
 
@@ -681,12 +697,13 @@ async def test_get_token_claims_delegates_to_validate_token(
     credentials = MagicMock()
     credentials.credentials = "raw.jwt.token"
     http_client = _fake_http_client()
+    cache = MagicMock(spec=JWKSCache)
 
     result = await security_module.get_token_claims(
-        credentials=credentials, http_client=http_client
+        credentials=credentials, http_client=http_client, cache=cache
     )
 
-    mock_validate.assert_awaited_once_with("raw.jwt.token", http_client)
+    mock_validate.assert_awaited_once_with("raw.jwt.token", http_client, cache)
     assert result == expected
 
 
