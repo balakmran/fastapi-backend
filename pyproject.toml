@@ -21,6 +21,7 @@ dependencies = [
     "opentelemetry-exporter-otlp>=1.42.1",
     "opentelemetry-instrumentation-fastapi>=0.63b1",
     "opentelemetry-instrumentation-httpx>=0.63b1",
+    "opentelemetry-instrumentation-sqlalchemy>=0.63b1",
     "opentelemetry-sdk>=1.42.1",
     "psycopg[binary]==3.3.5",
     "purgatory>=3.0.1",

@@ -185,20 +185,28 @@ so callers and the application always agree on the name.
 `AccessLogMiddleware` emits exactly one structured `http_request` INFO
 line as each request completes — so happy-path traffic is visible in
 the log stream, not only in traces. The line carries `method`, `path`,
-`status`, and `duration_ms`, plus the `request_id` (and trace context)
-bound for that request:
+`route`, `status`, and `duration_ms`, plus the `request_id` (and trace
+context) bound for that request:
 
 ```json
 {
   "event": "http_request",
   "method": "GET",
-  "path": "/api/v1/users/",
+  "path": "/api/v1/users/3f2a1c9e-...",
+  "route": "/api/v1/users/{user_id}",
   "status": 200,
   "duration_ms": 12.34,
   "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "level": "info"
 }
 ```
+
+`path` is the literal request path — high-cardinality, so it is
+useless as a dashboard dimension. `route` is the matched path
+*template* (`scope["route"]`, set once FastAPI resolves the endpoint),
+so dashboards can aggregate `GET /users/{user_id}` across every user
+ID without a cardinality explosion. `route` is `null` when no route
+matched (a 404).
 
 The middleware sits inside `RequestIDMiddleware` but outside the
 timeout and body-size limits, so 504 and 413 responses are logged with
@@ -220,14 +228,19 @@ QUOIN_ACCESS_LOG_ENABLED=False
 
 ### Configuration
 
-OTEL is configured in [`app/core/telemetry.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py)
-and automatically instruments FastAPI.
+OTEL is configured in [`app/core/telemetry.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py).
+`setup_opentelemetry(app)` runs at app-creation time and instruments
+FastAPI; the database engine is instrumented separately, in the
+lifespan, once it exists:
 
 ```python
-from app.core.telemetry import setup_opentelemetry
+from app.core.telemetry import instrument_sqlalchemy_engine, setup_opentelemetry
 
 app = FastAPI(...)
-setup_opentelemetry(app)
+setup_opentelemetry(app)  # FastAPI spans
+
+# Inside the lifespan, once the engine is created:
+instrument_sqlalchemy_engine(engine)  # database spans
 ```
 
 ### What Gets Traced
@@ -235,8 +248,8 @@ setup_opentelemetry(app)
 **Automatically instrumented:**
 
 - HTTP requests (FastAPI)
-- Database queries (SQLAlchemy/asyncpg)
-- Outgoing HTTP calls (httpx, if used)
+- Database queries (SQLAlchemy, via `instrument_sqlalchemy_engine`)
+- Outgoing HTTP calls (the shared `ResilientHTTPClient`, via `instrument_http_client`)
 
 **Example trace hierarchy:**
 

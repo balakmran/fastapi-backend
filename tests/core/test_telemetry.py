@@ -13,6 +13,7 @@ from app.core.config import Environment, settings
 from app.core.telemetry import (
     SafeConsoleSpanExporter,
     instrument_http_client,
+    instrument_sqlalchemy_engine,
     log_formatter_oneline,
     setup_opentelemetry,
 )
@@ -228,3 +229,44 @@ class TestInstrumentHttpClient:
             )
             # Should not propagate — app startup must not abort.
             instrument_http_client(mock_client)
+
+
+class TestInstrumentSqlalchemyEngine:
+    """Tests for instrument_sqlalchemy_engine (Improvement 3)."""
+
+    @mock.patch.object(settings, "OTEL_ENABLED", False)
+    def test_disabled_does_nothing(self):
+        """When OTEL is disabled the engine is not instrumented."""
+        mock_engine = MagicMock()
+        with patch(
+            "app.core.telemetry.SQLAlchemyInstrumentor"
+        ) as mock_instrumentor_cls:
+            instrument_sqlalchemy_engine(mock_engine)
+            mock_instrumentor_cls.assert_not_called()
+
+    @mock.patch.object(settings, "OTEL_ENABLED", True)
+    def test_enabled_instruments_the_sync_engine(self):
+        """When OTEL is enabled, the engine's sync_engine is instrumented."""
+        mock_engine = MagicMock()
+        with patch(
+            "app.core.telemetry.SQLAlchemyInstrumentor"
+        ) as mock_instrumentor_cls:
+            mock_instrumentor = mock_instrumentor_cls.return_value
+            instrument_sqlalchemy_engine(mock_engine)
+            mock_instrumentor.instrument.assert_called_once_with(
+                engine=mock_engine.sync_engine
+            )
+
+    @mock.patch.object(settings, "OTEL_ENABLED", True)
+    def test_instrumentation_failure_is_swallowed(self):
+        """Instrumentation errors are logged, not raised (best-effort)."""
+        mock_engine = MagicMock()
+        with patch(
+            "app.core.telemetry.SQLAlchemyInstrumentor"
+        ) as mock_instrumentor_cls:
+            mock_instrumentor = mock_instrumentor_cls.return_value
+            mock_instrumentor.instrument.side_effect = RuntimeError(
+                "version skew"
+            )
+            # Should not propagate — app startup must not abort.
+            instrument_sqlalchemy_engine(mock_engine)

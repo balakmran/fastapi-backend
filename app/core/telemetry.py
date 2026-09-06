@@ -9,6 +9,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
 )
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
@@ -16,6 +17,7 @@ from opentelemetry.sdk.trace.export import (
     ConsoleSpanExporter,
     SpanExportResult,
 )
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core import metadata
 from app.core.config import Environment, settings
@@ -101,3 +103,33 @@ def instrument_http_client(client: httpx.AsyncClient) -> None:
         HTTPXClientInstrumentor.instrument_client(client)
     except Exception as exc:
         logger.warning("http_client_instrumentation_failed", error=repr(exc))
+
+
+def instrument_sqlalchemy_engine(engine: AsyncEngine) -> None:
+    """Instrument a single async engine for OTel database tracing.
+
+    Emits a span per SQL statement executed through ``engine`` — or any
+    session bound to it — completing the trace hierarchy the FastAPI and
+    outbound-HTTP instrumentors already provide (the observability guide
+    promises database spans; without this, that hierarchy did not
+    exist). The specific engine instance is instrumented via SQLAlchemy
+    event hooks (not global monkeypatching of ``create_engine``), so
+    other engines created in the same process — e.g. a second one in
+    tests — are unaffected. No-op when ``QUOIN_OTEL_ENABLED`` is false.
+
+    Tracing is best-effort: if instrumentation fails (e.g. an
+    instrumentor/SQLAlchemy version skew) the error is logged and
+    swallowed so a purely observational concern never aborts application
+    startup.
+
+    Args:
+        engine: The async engine backing every request's session. The
+            instrumentor attaches to its underlying sync engine, which is
+            where SQLAlchemy's cursor-execute events actually fire.
+    """
+    if not settings.OTEL_ENABLED:
+        return
+    try:
+        SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
+    except Exception as exc:
+        logger.warning("db_instrumentation_failed", error=repr(exc))
