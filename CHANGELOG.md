@@ -44,6 +44,14 @@
   has no level filter of its own — so `DEBUG`/`INFO`/`WARNING`/`ERROR`
   were indistinguishable. `LOG_LEVEL` is also now typed as a `Literal`
   of those four values, so a typo fails fast at startup.
+- **Users**: `get_by_email` now compares via `lower(email)` instead of
+  the stored value directly, and a new migration
+  (`f76b93d38f43`) backfills any pre-existing row to lowercase. The
+  case-insensitive unique index (`f2f495892c21`) enforced uniqueness of
+  `lower(email)` going forward but never normalised existing data, so a
+  row written before that migration — or by any future path bypassing
+  `UserBase`'s validator — could hold mixed case and be invisible to
+  the friendly pre-check.
 - **Users**: the `q` search filter on `GET /users` now matches `%` and
   `_` in the search term literally instead of treating them as SQL
   `LIKE` wildcards — `q=100%` previously matched "100" followed by
