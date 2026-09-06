@@ -133,16 +133,28 @@ def setup_opentelemetry(app: FastAPI) -> None:
     if not settings.OTEL_ENABLED:
         return
 
-    resource = Resource(attributes={SERVICE_NAME: metadata.APP_NAME})
+    resource = Resource.create({
+        SERVICE_NAME: metadata.APP_NAME,
+        "service.version": metadata.VERSION,
+        "deployment.environment": settings.ENV.value,
+    })
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
-    # OTLP exporter if endpoint set, otherwise console
+    # OTLP exporter if endpoint set; otherwise console in development
+    # and test, or nothing (with a startup warning) in production.
     provider.add_span_processor(BatchSpanProcessor(exporter))
     FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
 ```
 
 Auto-instruments FastAPI HTTP requests. Exports via OTLP when
-`OTEL_EXPORTER_OTLP_ENDPOINT` is set, otherwise prints to console.
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set. Without it, development and test
+print spans to the console; production instead logs one
+`otel_enabled_without_exporter` warning and exports nothing, so
+`QUOIN_OTEL_ENABLED=true` without a collector configured doesn't
+silently interleave every span into the JSON log stream.
+`Resource.create` also honours the standard `OTEL_RESOURCE_ATTRIBUTES`
+and `OTEL_SERVICE_NAME` environment variables for any attribute not set
+explicitly above.
 
 #### Middlewares (`middlewares.py`)
 
