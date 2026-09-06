@@ -12,68 +12,28 @@
 
 ### Fixed
 
-- **Database**: `get_session` now commits (or rolls back) *before* the
-  response is sent, not after. FastAPI's default yield-dependency scope
-  closes the generator once the response has already gone out over the
-  wire, so a client could previously receive a 2xx for a write whose
-  `COMMIT` had not happened yet — or ever would, if it failed. Depend on
-  the new `SessionDep` (`app/db/session.py`) rather than
-  `Depends(get_session)` directly; it pins the required
-  `scope="function"`. **Manual reconciliation**: if you copied the
-  `Depends(get_session)` pattern into your own modules, switch them to
-  `SessionDep` too.
-- **Validation errors**: a `field_validator` raising `ValueError` or
-  `AssertionError` — Pydantic's own documented idiom — previously
-  crashed the 422 handler's JSON serialisation (the raised exception
-  lives under `ctx.error`, which isn't JSON-safe) and surfaced as an
-  internal 500 instead. Validation errors are now passed through
-  `jsonable_encoder` first. The `errors[]` array also drops `url` (a
-  link into Pydantic's docs) and truncates `input` to 200 characters,
-  so a validation error never echoes an unbounded amount of
-  client-supplied data back into the response.
-- **Error handling**: an unhandled exception (a bare `KeyError`, a bug)
-  now still gets `X-Request-ID`, security headers, and CORS headers on
-  its 500 response. Starlette moves any handler registered for the
-  bare `Exception` type into `ServerErrorMiddleware`, *above* every
-  middleware this project configures, so those headers were previously
-  never applied — the same class of gap already closed for 504/413/400.
-  A new `UnhandledErrorMiddleware`, innermost of all, catches the
-  exception before it escapes this project's middleware stack.
+- **Database**: `get_session` now commits (or rolls back) before the
+  response is sent, not after, via a new `SessionDep` that pins
+  `scope="function"`. **Manual reconciliation**: switch any
+  `Depends(get_session)` in your own modules to `SessionDep`.
+- **Validation errors**: a `field_validator` raising `ValueError` no
+  longer crashes into a 500 — errors are sanitized with
+  `jsonable_encoder`, and `errors[]` drops the Pydantic docs `url` and
+  truncates `input`.
+- **Error handling**: an unhandled exception's 500 response now still
+  carries `X-Request-ID`, security, and CORS headers, via a new
+  innermost `UnhandledErrorMiddleware`.
 - **Configuration**: `QUOIN_LOG_LEVEL` now actually controls log
-  verbosity. Nothing previously read it — `structlog.stdlib.BoundLogger`
-  has no level filter of its own — so `DEBUG`/`INFO`/`WARNING`/`ERROR`
-  were indistinguishable. `LOG_LEVEL` is also now typed as a `Literal`
-  of those four values, so a typo fails fast at startup.
-- **Users**: `get_by_email` now compares via `lower(email)` instead of
-  the stored value directly, and a new migration
-  (`f76b93d38f43`) backfills any pre-existing row to lowercase. The
-  case-insensitive unique index (`f2f495892c21`) enforced uniqueness of
-  `lower(email)` going forward but never normalised existing data, so a
-  row written before that migration — or by any future path bypassing
-  `UserBase`'s validator — could hold mixed case and be invisible to
-  the friendly pre-check.
-- **Users**: the `q` search filter on `GET /users` now matches `%` and
-  `_` in the search term literally instead of treating them as SQL
-  `LIKE` wildcards — `q=100%` previously matched "100" followed by
-  anything, and any `_` matched an arbitrary character.
-- **Observability**: in production, `QUOIN_OTEL_ENABLED=true` with no
-  `OTEL_EXPORTER_OTLP_ENDPOINT` configured no longer silently falls back
-  to printing every span to stdout — interleaved with the JSON log
-  stream, at the volume of *every* span, for spans nobody was
-  collecting. It now logs one `otel_enabled_without_exporter` warning
-  and exports nothing. Development and test keep the console fallback.
-- **Observability**: the tracing `Resource` now carries `service.version`
-  and `deployment.environment`, and is built via `Resource.create` so
-  the standard `OTEL_RESOURCE_ATTRIBUTES`/`OTEL_SERVICE_NAME` env vars
-  still contribute attributes — a bare `Resource(attributes=...)`
-  bypassed both and traces from two environments were otherwise
-  indistinguishable at the collector.
-- **Configuration**: a bare `ENV` (no `QUOIN_` prefix) no longer selects
-  a different `.env` file. Previously `ENV=production` picked
-  `.env.production` while `Settings.ENV` — read only from `QUOIN_ENV` —
-  stayed at its `development` default, silently skipping the production
-  fail-fast checks and the `/docs`/`/openapi.json` disable guard while
-  the process loaded production credentials.
+  verbosity, and a bare `ENV` (no `QUOIN_` prefix) no longer selects a
+  different `.env` file or diverges from `Settings.ENV`.
+- **Users**: `get_by_email` now matches case-insensitively via
+  `lower(email)` (with a migration backfilling legacy mixed-case rows),
+  and the `q` search filter matches `%`/`_` literally instead of as SQL
+  `LIKE` wildcards.
+- **Observability**: the tracing `Resource` now carries
+  `service.version` and `deployment.environment`; production with
+  `QUOIN_OTEL_ENABLED=true` and no OTLP endpoint now warns once instead
+  of printing every span to stdout.
 - **OpenAPI**: error responses are now documented as
   `application/problem+json` instead of `application/json`, matching
   what the exception handlers actually send.

@@ -12,6 +12,28 @@
 
 ### Fixed
 
+- **Database**: `get_session` now commits (or rolls back) before the
+  response is sent, not after, via a new `SessionDep` that pins
+  `scope="function"`. **Manual reconciliation**: switch any
+  `Depends(get_session)` in your own modules to `SessionDep`.
+- **Validation errors**: a `field_validator` raising `ValueError` no
+  longer crashes into a 500 — errors are sanitized with
+  `jsonable_encoder`, and `errors[]` drops the Pydantic docs `url` and
+  truncates `input`.
+- **Error handling**: an unhandled exception's 500 response now still
+  carries `X-Request-ID`, security, and CORS headers, via a new
+  innermost `UnhandledErrorMiddleware`.
+- **Configuration**: `QUOIN_LOG_LEVEL` now actually controls log
+  verbosity, and a bare `ENV` (no `QUOIN_` prefix) no longer selects a
+  different `.env` file or diverges from `Settings.ENV`.
+- **Users**: `get_by_email` now matches case-insensitively via
+  `lower(email)` (with a migration backfilling legacy mixed-case rows),
+  and the `q` search filter matches `%`/`_` literally instead of as SQL
+  `LIKE` wildcards.
+- **Observability**: the tracing `Resource` now carries
+  `service.version` and `deployment.environment`; production with
+  `QUOIN_OTEL_ENABLED=true` and no OTLP endpoint now warns once instead
+  of printing every span to stdout.
 - **OpenAPI**: error responses are now documented as
   `application/problem+json` instead of `application/json`, matching
   what the exception handlers actually send.
