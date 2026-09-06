@@ -4,6 +4,7 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 
@@ -13,6 +14,11 @@ from app.core.schemas import ProblemDetail
 logger = structlog.get_logger(__name__)
 
 _PROBLEM_MEDIA_TYPE = "application/problem+json"
+
+# Cap on the serialised length of a reflected `input` value in a 422
+# body, so a validation error never echoes an unbounded amount of
+# client-supplied data back into the response.
+_MAX_INPUT_CHARS = 200
 
 # CPython's HTTPStatus.phrase wording tracks RFC updates (e.g. 422's
 # phrase changed from "Unprocessable Entity" to "Unprocessable Content"),
@@ -98,9 +104,60 @@ async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
     return _problem_response(problem, 500)
 
 
+def _truncate_input(value: Any) -> Any:
+    """Cap the serialised length of a reflected validation `input` value.
+
+    Args:
+        value: A JSON-safe value (already passed through
+            ``jsonable_encoder``).
+
+    Returns:
+        ``value`` unchanged if its string form fits within
+        ``_MAX_INPUT_CHARS``, else a truncated string with an ellipsis.
+    """
+    text = value if isinstance(value, str) else repr(value)
+    if len(text) <= _MAX_INPUT_CHARS:
+        return value
+    return text[:_MAX_INPUT_CHARS] + "…"
+
+
+def _sanitize_validation_errors(
+    errors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Make validation errors JSON-safe and trim what they reveal.
+
+    Pydantic's documented custom-validation idiom — a ``field_validator``
+    raising ``ValueError`` or ``AssertionError`` — puts the raised
+    exception object itself under ``ctx.error``. That is not
+    JSON-serializable, so building the response with a bare
+    ``model_dump_json`` raises and this 422 path would itself surface as
+    an internal 500. ``jsonable_encoder`` is FastAPI's own fallback for
+    this: it stringifies anything it cannot otherwise encode.
+
+    Also drops ``url`` (a link into Pydantic's own docs, not useful to an
+    API client) and truncates ``input`` (see ``_truncate_input``), so a
+    validation error never echoes an unbounded amount of client-supplied
+    data — or a stray secret pasted into the wrong field — back into the
+    response body.
+
+    Args:
+        errors: Raw error dicts from ``exc.errors()``.
+
+    Returns:
+        JSON-safe error dicts with `url` removed and `input` truncated.
+    """
+    sanitized: list[dict[str, Any]] = []
+    for error in jsonable_encoder(errors):
+        error.pop("url", None)
+        if "input" in error:
+            error["input"] = _truncate_input(error["input"])
+        sanitized.append(error)
+    return sanitized
+
+
 async def validation_exception_handler(request: Request, exc: Any) -> Response:
     """Handle Pydantic and FastAPI request validation errors."""
-    errors: list[dict[str, Any]] = exc.errors()
+    errors = _sanitize_validation_errors(exc.errors())
     problem = ProblemDetail(
         type="urn:quoin:error:validation_error",
         title=_problem_title(422),

@@ -1,6 +1,7 @@
 import contextlib
+import json
 import uuid
-from collections.abc import Iterator, MutableMapping
+from collections.abc import Iterable, Iterator, MutableMapping
 from typing import Any
 from unittest.mock import patch
 
@@ -22,6 +23,7 @@ from app.core.middlewares import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
+    UnhandledErrorMiddleware,
     _safe_request_id,
     configure_cors,
     configure_middlewares,
@@ -753,6 +755,158 @@ async def test_trusted_host_rejects_bad_host_on_preflight() -> None:
     assert "Access-Control-Allow-Origin" not in response.headers
 
 
+@pytest.mark.asyncio
+async def test_unhandled_error_middleware_returns_500_problem_json() -> None:
+    """An unhandled exception yields a 500 RFC 9457 body, not a bare 500."""
+
+    async def boom(scope: Scope, receive: Receive, send: Send) -> None:
+        raise KeyError("secret internal detail")
+
+    middleware = UnhandledErrorMiddleware(boom)
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    sent: list[Message] = []
+
+    async def capture(message: Message) -> None:
+        sent.append(message)
+
+    with _capture_access_logs() as cap_logs:
+        await middleware({"type": "http", "path": "/boom"}, receive, capture)
+
+    starts = [m for m in sent if m["type"] == "http.response.start"]
+    bodies = [m for m in sent if m["type"] == "http.response.body"]
+    assert starts[0]["status"] == status.HTTP_500_INTERNAL_SERVER_ERROR
+    payload = json.loads(bodies[0]["body"])
+    assert payload["type"] == "urn:quoin:error:internal_server_error"
+    assert payload["status"] == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert payload["instance"] == "/boom"
+    assert "secret internal detail" not in bodies[0]["body"].decode()
+
+    events = [e for e in cap_logs if e["event"] == "unhandled_exception"]
+    assert len(events) == 1
+    assert events[0]["exc_type"] == "KeyError"
+    assert events[0]["path"] == "/boom"
+
+
+@pytest.mark.asyncio
+async def test_unhandled_error_middleware_ignores_non_http_scope() -> None:
+    """Lifespan / websocket scopes pass through untouched."""
+    seen: list[str] = []
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        seen.append(scope["type"])
+
+    middleware = UnhandledErrorMiddleware(downstream)
+
+    async def empty_recv() -> Message:
+        return {"type": "lifespan.startup"}
+
+    async def noop_send(_: Message) -> None:
+        return None
+
+    await middleware({"type": "lifespan"}, empty_recv, noop_send)
+    assert seen == ["lifespan"]
+
+
+@pytest.mark.asyncio
+async def test_unhandled_error_after_response_started_reraises() -> None:
+    """An exception after headers are sent re-raises instead of a 500.
+
+    Once ``http.response.start`` is on the wire a 500 cannot replace it,
+    mirroring TimeoutMiddleware's own already-started handling.
+    """
+
+    async def streaming_app(scope: Scope, receive: Receive, send: Send) -> None:
+        await send(
+            {"type": "http.response.start", "status": 200, "headers": []}
+        )
+        raise RuntimeError("boom after headers")
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    sent: list[Message] = []
+
+    async def capture(message: Message) -> None:
+        sent.append(message)
+
+    middleware = UnhandledErrorMiddleware(streaming_app)
+    with pytest.raises(RuntimeError, match="boom after headers"):
+        await middleware({"type": "http", "path": "/stream"}, receive, capture)
+
+    starts = [m for m in sent if m["type"] == "http.response.start"]
+    assert len(starts) == 1
+    assert starts[0]["status"] == status.HTTP_200_OK
+
+
+@pytest.mark.asyncio
+async def test_unhandled_exception_500_carries_cors_and_security_headers() -> (
+    None
+):
+    """A 500 from an unhandled exception still gets CORS/security/RID.
+
+    Regression check: Starlette moves a bare-``Exception`` handler to
+    ``ServerErrorMiddleware``, *above* every middleware this module
+    configures, so without ``UnhandledErrorMiddleware`` the resulting
+    500 would carry none of these headers — the same defect class
+    already fixed for 504/413/400.
+    """
+    app = create_app()
+
+    @app.get("/test-unhandled-wrapped")
+    async def _boom() -> dict[str, str]:
+        raise KeyError("boom")
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
+        base_url="http://test",
+    ) as ac:
+        response = await ac.get(
+            "/test-unhandled-wrapped",
+            headers={"Origin": "http://localhost:3000"},
+        )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.headers["content-type"] == "application/problem+json"
+    _assert_error_response_fully_wrapped(response)
+
+
+@pytest.mark.asyncio
+async def test_unhandled_exception_logs_with_bound_request_id() -> None:
+    """The unhandled_exception log line carries the request's request_id.
+
+    Regression check: because UnhandledErrorMiddleware sits inside
+    RequestIDMiddleware, the contextvar is still bound when it logs —
+    unlike the Starlette-level fallback handler, which only ever runs
+    after RequestIDMiddleware has already unbound it.
+    """
+    app = create_app()
+
+    @app.get("/test-unhandled-request-id")
+    async def _boom() -> dict[str, str]:
+        raise KeyError("boom")
+
+    with _capture_access_logs(
+        processors=(structlog.contextvars.merge_contextvars,)
+    ) as cap_logs:
+        async with AsyncClient(
+            transport=ASGITransport(app=app, raise_app_exceptions=False),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get(
+                "/test-unhandled-request-id",
+                headers={settings.REQUEST_ID_HEADER: "unhandled-test-id"},
+            )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.headers[settings.REQUEST_ID_HEADER] == "unhandled-test-id"
+    events = [e for e in cap_logs if e["event"] == "unhandled_exception"]
+    assert len(events) == 1
+    assert events[0]["request_id"] == "unhandled-test-id"
+
+
 @pytest.fixture
 def access_log_app() -> FastAPI:
     """Minimal app wrapping AccessLogMiddleware for access-log testing."""
@@ -771,7 +925,9 @@ def access_log_app() -> FastAPI:
 
 
 @contextlib.contextmanager
-def _capture_access_logs() -> Iterator[list[MutableMapping[str, Any]]]:
+def _capture_access_logs(
+    processors: Iterable[Any] = (),
+) -> Iterator[list[MutableMapping[str, Any]]]:
     """Capture events from the middlewares module logger.
 
     ``capture_logs`` swaps the processor chain, but the module-level
@@ -779,8 +935,14 @@ def _capture_access_logs() -> Iterator[list[MutableMapping[str, Any]]]:
     (``cache_logger_on_first_use=True``), so it would keep the real
     processors and bypass the capture. Swapping in a fresh, unrealized
     proxy makes it bind to the capture processors inside the block.
+
+    Args:
+        processors: Extra processors to run before the capture, e.g.
+            ``structlog.contextvars.merge_contextvars`` — ``capture_logs``
+            drops it by default, so bound contextvars (like
+            ``request_id``) are otherwise absent from captured events.
     """
-    with capture_logs() as cap_logs:
+    with capture_logs(processors=processors) as cap_logs:
         with patch.object(middlewares, "logger", structlog.get_logger()):
             yield cap_logs
 

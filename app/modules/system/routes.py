@@ -1,16 +1,15 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core import metadata
 from app.core.exceptions import InternalServerError, ServiceUnavailableError
-from app.db.session import get_session
+from app.db.session import SessionDep
 
 router = APIRouter()
 templates = Jinja2Templates(
@@ -44,7 +43,7 @@ async def health() -> dict[str, str]:
 @router.get("/ready", include_in_schema=False)
 async def ready(
     request: Request,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> dict[str, str]:
     """Readiness probe endpoint.
 

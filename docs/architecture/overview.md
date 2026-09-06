@@ -182,9 +182,16 @@ async def get_session(request: Request) -> AsyncSession:
     async_session = async_sessionmaker(engine, ...)
     async with async_session() as session:
         yield session
+        await session.commit()  # or rollback() on error
 ```
 
-Dependency injection for database sessions.
+Routes depend on `SessionDep` (an `Annotated[AsyncSession,
+Depends(get_session, scope="function")]` alias), not on `get_session`
+directly. The explicit `scope="function"` matters: it's what makes
+FastAPI close this generator — running the commit above — *before* the
+response is sent, rather than after. Depending on `get_session` without
+that scope commits the transaction after the client has already
+received the response.
 
 ---
 

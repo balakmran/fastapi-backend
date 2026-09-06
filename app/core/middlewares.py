@@ -30,6 +30,79 @@ def _safe_request_id(raw: str | None) -> str:
     return str(uuid.uuid4())
 
 
+class UnhandledErrorMiddleware:
+    """Last-resort safety net: turn an unhandled exception into a 500.
+
+    Starlette pulls any handler registered for the bare ``Exception``
+    type out of the ordinary exception-handling chain and hands it to
+    ``ServerErrorMiddleware`` instead — the *outermost* layer, installed
+    above every middleware configured in this module. By the time that
+    layer runs, the exception has already unwound past every middleware
+    below it without any of them ever calling their wrapped ``send``, so
+    the 500 response it builds carries no ``X-Request-ID``, no security
+    headers, and no CORS headers either (Starlette's ``CORSMiddleware``
+    only adds them to a message it actually sees go out). This is the
+    same class of defect the ordering in ``configure_middlewares``
+    already fixes for 504/413/400 — the 500 path was the one case that
+    ordering could not reach, because it happens above this module's
+    layers rather than within them.
+
+    Registered innermost of all — closest to the router — so an
+    unhandled exception is caught here and its 500 problem response is
+    sent through the very ``send`` callable the outer middlewares
+    (CORS, RequestID, SecurityHeaders, ...) already wrapped, letting
+    their header injection run the normal way instead of being
+    bypassed. The Starlette-level ``Exception`` handler
+    (``app.core.exception_handlers.unhandled_exception_handler``) stays
+    registered as a further fallback — for an exception raised by a
+    middleware itself (above this layer) or for a non-HTTP scope, which
+    this class ignores.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the downstream ASGI app."""
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Catch an unhandled exception and send an RFC 9457 500."""
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        response_started = False
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        except Exception as exc:
+            logger.exception(
+                "unhandled_exception",
+                exc_type=type(exc).__name__,
+                path=scope.get("path", ""),
+            )
+            if response_started:
+                # Headers already on the wire — nothing left to do but
+                # let the outer ServerErrorMiddleware abort the
+                # connection, mirroring TimeoutMiddleware's own
+                # already-started handling below.
+                raise
+            problem = ProblemDetail(
+                type="urn:quoin:error:internal_server_error",
+                title="Internal Server Error",
+                status=500,
+                detail="Internal Server Error",
+                instance=scope.get("path", ""),
+            )
+            await _send_problem(send, problem, 500)
+
+
 class TimeoutMiddleware:
     """Enforce a per-request wall-clock timeout using anyio cancel scopes.
 
@@ -407,9 +480,10 @@ def configure_middlewares(app: FastAPI) -> None:
     Middleware is registered in innermost-first order (add_middleware is
     LIFO). SecurityHeaders and RequestID are added last so they become
     the outermost layers: every response — including 504s from
-    TimeoutMiddleware, 413s from the size limit, and 400s from
-    TrustedHost — bubbles back up through them and gets security
-    headers and an X-Request-ID echo before reaching the client.
+    TimeoutMiddleware, 413s from the size limit, 400s from TrustedHost,
+    and 500s from UnhandledErrorMiddleware — bubbles back up through
+    them and gets security headers and an X-Request-ID echo before
+    reaching the client.
 
     TrustedHost sits outside CORS so Host validation applies to every
     request, including a CORS preflight — Starlette's CORSMiddleware
@@ -421,17 +495,25 @@ def configure_middlewares(app: FastAPI) -> None:
     (it isn't part of a legitimate CORS negotiation), but it does get
     the outer SecurityHeaders/RequestID treatment. Within that, Timeout
     wraps SizeLimit so oversize bodies are still rejected before the
-    timeout clock ticks into downstream work. The in-flight counter is
-    added first of all so it sits innermost — closest to the router —
-    and brackets only requests that pass every outer layer and reach a
-    handler.
+    timeout clock ticks into downstream work.
+
+    UnhandledErrorMiddleware and the in-flight counter are added first
+    of all, so they sit innermost — closest to the router — and bracket
+    only requests that pass every outer layer and reach a handler.
+    UnhandledErrorMiddleware sits innermost of the two so its own 500
+    response passes through as few layers as possible before reaching
+    the CORS/security/request-ID headers it depends on; either order
+    releases the in-flight counter correctly, since InFlightRequest's
+    own ``finally`` runs regardless of whether the call beneath it
+    returned a response or propagated an exception.
 
     AccessLog is added just before RequestID, so it sits inside
     RequestID (the ``request_id`` contextvar is bound before it runs)
     but outside Timeout/SizeLimit/CORS — one INFO line per request that
-    correctly reports 504/413 statuses and their duration too.
+    correctly reports 504/413/500 statuses and their duration too.
     """
-    app.add_middleware(InFlightRequestMiddleware)  # innermost — added first
+    app.add_middleware(UnhandledErrorMiddleware)  # innermost of all
+    app.add_middleware(InFlightRequestMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware)
     app.add_middleware(TimeoutMiddleware)
     configure_cors(app)
@@ -448,6 +530,7 @@ __all__ = [
     "RequestSizeLimitMiddleware",
     "SecurityHeadersMiddleware",
     "TimeoutMiddleware",
+    "UnhandledErrorMiddleware",
     "configure_cors",
     "configure_middlewares",
     "configure_trusted_hosts",

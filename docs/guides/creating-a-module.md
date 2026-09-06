@@ -302,14 +302,12 @@ class ProductService:
 ```python
 # app/modules/product/routes.py
 import uuid
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.openapi import DEFAULT_ERROR_RESPONSES, error_responses
 from app.core.pagination import Page, PageParams
-from app.db.session import get_session
+from app.db.session import SessionDep
 from app.modules.product.repository import ProductRepository
 from app.modules.product.schemas import (
     ProductCreate,
@@ -325,9 +323,7 @@ router = APIRouter(
 )
 
 
-def get_product_service(
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> ProductService:
+def get_product_service(session: SessionDep) -> ProductService:
     """Instantiate ProductService with its dependencies."""
     repository = ProductRepository(session)
     return ProductService(repository)
