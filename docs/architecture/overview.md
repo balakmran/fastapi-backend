@@ -68,7 +68,7 @@ Shared infrastructure components used across the application.
 class Settings(BaseSettings):
     # Environment
     ENV: Environment = Environment.development
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: LogLevel = "INFO"  # DEBUG | INFO | WARNING | ERROR
     OTEL_ENABLED: bool = True
 
     # Database
@@ -257,6 +257,24 @@ sequenceDiagram
 | **Repositories** | Database operations           | `session.execute(select(User))`      |
 | **Models**       | Database schema               | `class User(SQLModel, table=True)`   |
 | **Schemas**      | API contracts                 | `class UserCreate(BaseModel)`        |
+
+---
+
+## Template-Owned vs. User-Owned Files
+
+QuoinAPI is also a Copier template, so every file falls on one side of a
+line: **template-owned** files ship improvements to you on
+`copier update`; **user-owned** files are yours and are never rewritten.
+
+| Ownership | Files | On `copier update` |
+| :--- | :--- | :--- |
+| Template | `app/core/`, `app/db/`, `app/main.py`, `app/api.py`, `alembic/env.py`, `justfile`, `pyproject.toml`, `Dockerfile`, `.github/`, `.claude/`, `docs/guides/` | Updated; edits here are what produce merge conflicts |
+| User | your `app/modules/<feature>/`, their tests, the migrations you generate, `.env`, your own docs | Left alone |
+| Example | `app/modules/user/` and its tests | Template-owned, but meant to be deleted or rewritten once you have real modules |
+
+Keeping your code in `app/modules/` is what keeps `copier update` diffs
+small. See the [API stability guide](../guides/api-stability.md) for what
+counts as a breaking template change.
 
 ---
 

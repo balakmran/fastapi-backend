@@ -466,9 +466,11 @@ ships spans and metrics without code changes:
 
 **Check:**
 
-1. Is `setup_logging()` called? (Should be in `create_app()`)
-2. Is `QUOIN_ENV` set correctly?
-3. Are you using positional args instead of keyword args?
+1. Is the event below `QUOIN_LOG_LEVEL`? (`INFO` by default — `DEBUG`
+   lines are dropped.)
+2. Is `setup_logging()` called? (Should be in `create_app()`)
+3. Is `QUOIN_ENV` set correctly?
+4. Are you using positional args instead of keyword args?
 
 ### Traces Not Captured
 
@@ -476,15 +478,17 @@ ships spans and metrics without code changes:
 
 1. Is `QUOIN_OTEL_ENABLED=True`?
 2. Is `setup_opentelemetry(app)` called after app creation?
-3. Are SQLAlchemy/httpx installed? (Required for auto-instrumentation)
+3. In production, is `OTEL_EXPORTER_OTLP_ENDPOINT` set? Without it the
+   app logs `otel_enabled_without_exporter` and exports nothing.
+4. Missing **database** spans only? `instrument_sqlalchemy_engine(engine)`
+   must run in the lifespan, once the engine exists.
 
 ### Too Many Logs
 
-**Solution**: Increase log level in production:
+**Solution**: raise the log level — no code change needed:
 
-```python
-# app/core/logging.py
-root_logger.setLevel(logging.WARNING)  # Only warnings and errors
+```bash
+QUOIN_LOG_LEVEL=WARNING  # Only warnings and errors
 ```
 
 ---

@@ -96,14 +96,16 @@ docker-compose up -d
 **With Docker CLI:**
 
 ```bash
-# Run PostgreSQL
+# Run PostgreSQL. The image reads POSTGRES_*, its own variables --
+# the QUOIN_POSTGRES_* settings belong to the app container.
 docker run -d \
   --name postgres \
-  -e QUOIN_POSTGRES_USER=postgres \
-  -e QUOIN_POSTGRES_PASSWORD=postgres \
-  -e QUOIN_POSTGRES_DB=app_db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=app_db \
   -p 5432:5432 \
-  postgres:17-alpine
+  -v postgres_data:/var/lib/postgresql \
+  postgres:18
 
 # Run Application
 docker run -d \

@@ -19,7 +19,7 @@ choice.
 - **Automatic OpenAPI** documentation generation
 - **Pydantic integration** for automatic request/response validation
 - **Type hints** enable excellent IDE support and type checking
-- **Modern Python** (3.8+) with native async/await support
+- **Modern Python** (3.12+) with native async/await support
 
 **Trade-offs:**
 
@@ -205,19 +205,17 @@ line-length = 80
 - **Strict type checking** — Enforced across entire codebase
 - **Fast execution** — Incremental type checking for large codebases
 - **Better error messages** — More actionable than mypy
-- **Modern tooling** — Designed for Python 3.8+ type hints
+- **Modern tooling** — Designed for modern (3.12+) type hints
 - **100% typed** — Project follows strict typing standards
 
-**Configuration:**
-```toml
-# pyproject.toml
-[tool.ty]
-strict = true
-```
+**Configuration:** none — `ty` runs on its defaults. Strictness comes
+from the project convention (100% type hints, no MyPy-style
+`# type: ignore[...]` tags) enforced by the `just check` gate and the
+end-of-turn hook.
 
 **Usage:**
 ```bash
-just typecheck  # Run type checker
+just typecheck  # uv run ty check
 ```
 
 **Trade-offs:**
@@ -332,10 +330,6 @@ check:
 - ❌ Less universal than make
 - ❌ Requires installation (not system default)
 
-
-## Architectural Decisions
-
-
 ### Zensical (Documentation)
 
 **Chosen:** Zensical
@@ -394,8 +388,9 @@ name = "modern"
 # Service raises domain exception
 raise ConflictError(message="Email already registered")
 
-# Global handler converts to HTTP response
-return JSONResponse(status_code=409, content={"detail": message})
+# Global handler converts it to an RFC 9457 problem response
+# (application/problem+json) carrying type, title, status, detail, and
+# instance -- built centrally, never in the service.
 ```
 
 **Alternatives Rejected:**

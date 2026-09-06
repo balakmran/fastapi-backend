@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     ENV: Environment = (
         Environment.development
     )  # development | test | production
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: LogLevel = "INFO"  # DEBUG | INFO | WARNING | ERROR
 
     # Database
     POSTGRES_DRIVER: str = "postgresql+asyncpg"
