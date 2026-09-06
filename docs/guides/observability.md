@@ -323,11 +323,11 @@ protocol. Any OTLP-compatible backend works without changing
 application code — only the `OTEL_EXPORTER_OTLP_ENDPOINT` env var
 needs to point at it.
 
-### Console (development default)
+### Console (development and test default)
 
-With no `OTEL_EXPORTER_OTLP_ENDPOINT` set, spans are printed to
-stdout. Each span includes a `trace_id` you can match against the
-`trace_id` field in your structlog output:
+With no `OTEL_EXPORTER_OTLP_ENDPOINT` set, development and test print
+spans to stdout. Each span includes a `trace_id` you can match against
+the `trace_id` field in your structlog output:
 
 ```
 {
@@ -379,6 +379,15 @@ ships spans and metrics without code changes:
     rather than exporting directly to a backend. It gives you batching,
     retry, tail-based sampling, and the ability to fan out to multiple
     backends without changing the app.
+
+!!! warning "Production with no endpoint configured"
+    Development and test fall back to printing spans to stdout when
+    `OTEL_EXPORTER_OTLP_ENDPOINT` is unset. Production does not — with
+    `QUOIN_OTEL_ENABLED=true` and no endpoint, it logs one
+    `otel_enabled_without_exporter` warning at startup and exports no
+    spans at all, rather than interleaving every span into the JSON log
+    stream. Set `OTEL_EXPORTER_OTLP_ENDPOINT` (or a collector's env
+    vars) before enabling OTel in production.
 
 ---
 

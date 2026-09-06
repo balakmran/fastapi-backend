@@ -3,9 +3,13 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import httpx
+import structlog
+from opentelemetry.sdk.resources import SERVICE_NAME
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+from structlog.testing import capture_logs
 
-from app.core.config import settings
+from app.core import metadata, telemetry
+from app.core.config import Environment, settings
 from app.core.telemetry import (
     SafeConsoleSpanExporter,
     instrument_http_client,
@@ -121,6 +125,70 @@ class TestSetupOpenTelemetry:
                 mock_otlp_exporter.assert_called_once()
                 mock_processor.assert_called_once()
                 mock_instrumentor.instrument_app.assert_called_once()
+
+    @mock.patch.object(settings, "OTEL_ENABLED", True)
+    def test_resource_carries_service_version_and_environment(self):
+        """B10 regression: the Resource carries version and environment.
+
+        A bare ``Resource(attributes=...)`` only ever carried
+        ``service.name`` and bypassed the standard
+        ``OTEL_RESOURCE_ATTRIBUTES``/``OTEL_SERVICE_NAME`` detectors
+        entirely; ``Resource.create`` both adds version/environment and
+        still runs those detectors.
+        """
+        mock_app = MagicMock()
+
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}):
+            with (
+                patch("app.core.telemetry.FastAPIInstrumentor"),
+                patch("app.core.telemetry.TracerProvider") as mock_provider_cls,
+                patch("app.core.telemetry.BatchSpanProcessor"),
+                patch("app.core.telemetry.SafeConsoleSpanExporter"),
+                patch("app.core.telemetry.trace"),
+            ):
+                setup_opentelemetry(mock_app)
+
+        resource = mock_provider_cls.call_args.kwargs["resource"]
+        assert resource.attributes[SERVICE_NAME] == metadata.APP_NAME
+        assert resource.attributes["service.version"] == metadata.VERSION
+        assert (
+            resource.attributes["deployment.environment"] == settings.ENV.value
+        )
+
+    @mock.patch.object(settings, "OTEL_ENABLED", True)
+    @mock.patch.object(settings, "ENV", Environment.production)
+    def test_setup_production_without_exporter_warns_and_skips_console(self):
+        """B6 regression: production with no OTLP endpoint warns.
+
+        Instead of silently defaulting to the console exporter.
+        """
+        mock_app = MagicMock()
+
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}):
+            with (
+                patch(
+                    "app.core.telemetry.FastAPIInstrumentor"
+                ) as mock_instrumentor,
+                patch("app.core.telemetry.TracerProvider"),
+                patch(
+                    "app.core.telemetry.BatchSpanProcessor"
+                ) as mock_processor,
+                patch(
+                    "app.core.telemetry.SafeConsoleSpanExporter"
+                ) as mock_exporter,
+                patch("app.core.telemetry.trace"),
+                capture_logs() as cap_logs,
+                patch.object(telemetry, "logger", structlog.get_logger()),
+            ):
+                setup_opentelemetry(mock_app)
+
+        mock_exporter.assert_not_called()
+        mock_processor.assert_not_called()
+        mock_instrumentor.instrument_app.assert_called_once()
+        events = [
+            e for e in cap_logs if e["event"] == "otel_enabled_without_exporter"
+        ]
+        assert len(events) == 1
 
 
 class TestInstrumentHttpClient:

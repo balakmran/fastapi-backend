@@ -44,6 +44,18 @@
   has no level filter of its own — so `DEBUG`/`INFO`/`WARNING`/`ERROR`
   were indistinguishable. `LOG_LEVEL` is also now typed as a `Literal`
   of those four values, so a typo fails fast at startup.
+- **Observability**: in production, `QUOIN_OTEL_ENABLED=true` with no
+  `OTEL_EXPORTER_OTLP_ENDPOINT` configured no longer silently falls back
+  to printing every span to stdout — interleaved with the JSON log
+  stream, at the volume of *every* span, for spans nobody was
+  collecting. It now logs one `otel_enabled_without_exporter` warning
+  and exports nothing. Development and test keep the console fallback.
+- **Observability**: the tracing `Resource` now carries `service.version`
+  and `deployment.environment`, and is built via `Resource.create` so
+  the standard `OTEL_RESOURCE_ATTRIBUTES`/`OTEL_SERVICE_NAME` env vars
+  still contribute attributes — a bare `Resource(attributes=...)`
+  bypassed both and traces from two environments were otherwise
+  indistinguishable at the collector.
 - **Configuration**: a bare `ENV` (no `QUOIN_` prefix) no longer selects
   a different `.env` file. Previously `ENV=production` picked
   `.env.production` while `Settings.ENV` — read only from `QUOIN_ENV` —

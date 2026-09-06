@@ -18,7 +18,7 @@ from opentelemetry.sdk.trace.export import (
 )
 
 from app.core import metadata
-from app.core.config import settings
+from app.core.config import Environment, settings
 
 logger = structlog.get_logger(__name__)
 
@@ -45,19 +45,42 @@ def setup_opentelemetry(app: FastAPI) -> None:
     if not settings.OTEL_ENABLED:
         return
 
-    resource = Resource(attributes={SERVICE_NAME: metadata.APP_NAME})
+    # Resource.create (unlike a bare Resource(...)) also runs the
+    # standard OTel resource detectors, so OTEL_RESOURCE_ATTRIBUTES and
+    # OTEL_SERVICE_NAME still contribute attributes — but the values
+    # below always win, since Resource.merge lets the updating side
+    # override the base one.
+    resource = Resource.create(
+        {
+            SERVICE_NAME: metadata.APP_NAME,
+            "service.version": metadata.VERSION,
+            "deployment.environment": settings.ENV.value,
+        }
+    )
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
 
     if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
         exporter = OTLPSpanExporter()
-        processor = BatchSpanProcessor(exporter)
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+    elif settings.ENV == Environment.production:
+        # No collector configured: printing every span to stdout would
+        # interleave them with the JSON log stream and cost log-pipeline
+        # volume for spans nobody collects. Warn once and export nothing
+        # rather than silently defaulting to the console exporter.
+        logger.warning(
+            "otel_enabled_without_exporter",
+            detail=(
+                "QUOIN_OTEL_ENABLED is true but "
+                "OTEL_EXPORTER_OTLP_ENDPOINT is unset; no spans will be "
+                "exported."
+            ),
+        )
     else:
-        # Local development: Print traces to console
+        # Local development / test: print traces to console.
         exporter = SafeConsoleSpanExporter(formatter=log_formatter_oneline)
-        processor = BatchSpanProcessor(exporter)
+        provider.add_span_processor(BatchSpanProcessor(exporter))
 
-    provider.add_span_processor(processor)
     FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
 
 
