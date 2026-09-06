@@ -75,10 +75,12 @@ class Settings(BaseSettings):
     POSTGRES_DRIVER: str = "postgresql+asyncpg"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
+    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
     POSTGRES_DB: str = "app_db"
     # ...
 
-    @computed_field
+    # A plain @property, not a @computed_field: the credential-bearing
+    # URL stays out of model_dump() and the OpenAPI schema.
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         return MultiHostUrl.build(...)

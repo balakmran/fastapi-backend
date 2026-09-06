@@ -12,8 +12,8 @@ Settings.
 ### Settings Class
 
 ```python
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
-from pydantic import computed_field
 from pydantic_core import MultiHostUrl
 
 
@@ -29,10 +29,12 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
     POSTGRES_DB: str = "app_db"
 
-    @computed_field
+    # A plain @property, not a @computed_field: the credential-bearing
+    # URL stays out of model_dump() and the OpenAPI schema, and the
+    # password is a SecretStr, redacted in dumps.
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         # Constructs database URL from POSTGRES_* components
