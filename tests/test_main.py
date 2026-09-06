@@ -4,8 +4,25 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
+from app.core.config import Environment, settings
 from app.main import create_app
+
+
+def test_create_app_calls_validate_production_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """create_app() itself calls validate_production_settings() (Imp. 11).
+
+    Every other boot-validation test calls the helper function directly
+    — none of them would notice a refactor of create_app() that
+    accidentally dropped the call. Test settings otherwise leave the
+    OAuth trust anchor unset, so flipping ENV to production is enough to
+    prove create_app() itself performs the check, crash-loop and all.
+    """
+    monkeypatch.setattr(settings, "ENV", Environment.production)
+
+    with pytest.raises(RuntimeError, match="QUOIN_OAUTH_JWKS_URI"):
+        create_app()
 
 
 @pytest.fixture(autouse=True)
