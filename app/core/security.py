@@ -168,7 +168,7 @@ class JWKSCache:
             return self._keys[kid]
 
 
-def get_jwks_cache(request: Request) -> JWKSCache:
+async def get_jwks_cache(request: Request) -> JWKSCache:
     """Return (or lazily create) this application's JWKS cache.
 
     Stored on ``app.state`` — mirroring ``get_http_client`` — rather than
@@ -176,6 +176,12 @@ def get_jwks_cache(request: Request) -> JWKSCache:
     gets its own cache instead of sharing one process-wide singleton, and
     a future multi-issuer setup has somewhere per-app to keep more than
     one.
+
+    Declared ``async`` deliberately: it sits on the authenticated
+    request path, and a plain ``def`` dependency would make FastAPI hop
+    to a threadpool worker on every request just to read an attribute.
+    Running on the event loop also makes the check-then-set below atomic,
+    so a cold-start burst cannot build (and discard) several caches.
 
     Args:
         request: The current FastAPI request (used to access app.state).

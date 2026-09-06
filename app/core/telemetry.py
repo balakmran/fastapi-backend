@@ -112,10 +112,15 @@ def instrument_sqlalchemy_engine(engine: AsyncEngine) -> None:
     session bound to it — completing the trace hierarchy the FastAPI and
     outbound-HTTP instrumentors already provide (the observability guide
     promises database spans; without this, that hierarchy did not
-    exist). The specific engine instance is instrumented via SQLAlchemy
-    event hooks (not global monkeypatching of ``create_engine``), so
-    other engines created in the same process — e.g. a second one in
-    tests — are unaffected. No-op when ``QUOIN_OTEL_ENABLED`` is false.
+    exist). No-op when ``QUOIN_OTEL_ENABLED`` is false.
+
+    Call this **once per process**, on the engine the application
+    serves requests from. ``SQLAlchemyInstrumentor`` is a singleton that
+    both attaches to the engine passed here *and* patches SQLAlchemy's
+    ``create_engine``/``create_async_engine`` module-wide, so every
+    engine built afterwards is instrumented too; a second call is
+    refused ("Attempting to instrument while already instrumented") and
+    leaves its argument untouched.
 
     Tracing is best-effort: if instrumentation fails (e.g. an
     instrumentor/SQLAlchemy version skew) the error is logged and

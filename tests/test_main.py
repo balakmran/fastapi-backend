@@ -1,11 +1,42 @@
+import contextlib
+import logging
+from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import structlog
 from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.core.config import Environment, settings
 from app.main import create_app
+
+
+@contextlib.contextmanager
+def _preserved_logging_config() -> Iterator[None]:
+    """Restore global logging state on exit.
+
+    ``create_app()`` calls ``setup_logging()``, which reconfigures
+    structlog process-wide and clears the stdlib root logger's handlers
+    — including the ones pytest installs for ``caplog`` and live
+    logging. Neither is undone by ``monkeypatch``, so a test that boots
+    an app under a different ``ENV`` would otherwise leave every later
+    test in the session running against the wrong logging profile.
+
+    structlog's processor *list object* is restored by identity, not
+    just by value: ``capture_logs()`` works by mutating that list in
+    place, and loggers cached before the swap hold a reference to it.
+    """
+    config = structlog.get_config().copy()
+    root = logging.getLogger()
+    handlers = root.handlers[:]
+    level = root.level
+    try:
+        yield
+    finally:
+        structlog.configure(**config)
+        root.handlers[:] = handlers
+        root.setLevel(level)
 
 
 def test_create_app_calls_validate_production_settings(
@@ -21,8 +52,9 @@ def test_create_app_calls_validate_production_settings(
     """
     monkeypatch.setattr(settings, "ENV", Environment.production)
 
-    with pytest.raises(RuntimeError, match="QUOIN_OAUTH_JWKS_URI"):
-        create_app()
+    with _preserved_logging_config():
+        with pytest.raises(RuntimeError, match="QUOIN_OAUTH_JWKS_URI"):
+            create_app()
 
 
 @pytest.fixture(autouse=True)
