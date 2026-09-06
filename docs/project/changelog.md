@@ -20,8 +20,24 @@
   routers carry the default set (401, 403, 422, 500); routes add their
   own codes. `just new <module>` now scaffolds routers with the default
   set, so new modules document their error bodies out of the box.
+- **Observability**: SQL queries are now traced
+  (`instrument_sqlalchemy_engine`), completing the trace hierarchy the
+  guide already documented. The access log also records the matched
+  route template (`route`) alongside the literal request `path`, so
+  dashboards can aggregate per-endpoint without a cardinality
+  explosion.
+- **Tooling**: `just check` now runs `just migrate-check`
+  (`alembic upgrade head && alembic check`), failing the build if a
+  model change in `models.py` is missing its migration.
+- **Roadmap**: added a "Known Correctness Issues" lane in
+  `ROADMAP.md` for confirmed bugs that fit neither the launch
+  checklist nor the demand-gated backlog.
 
 ### Changed
+
+- **Security**: the JWKS cache now lives on `app.state`, created
+  lazily per application instance, instead of a process-wide module
+  global — matching the shared HTTP client.
 
 - **Dependencies**: transitive lock refresh (`uv lock --upgrade`); no
   direct pins changed. `just audit` reports no known vulnerabilities.
@@ -94,6 +110,13 @@
   Both fixes change generated client SDKs: error models for `422` and
   the content type of every error response. The wire format is
   unchanged — only the documented contract was wrong.
+- **Error handling**: an unmatched route (404) or a route matched with
+  the wrong method (405) — Starlette's own `HTTPException`, raised
+  internally rather than by app code — now returns
+  `application/problem+json` like every other error, instead of a bare
+  `{"detail": ...}` body. A new httpx event hook on the test suite's
+  `client` fixture checks this contract on every non-2xx response
+  going forward.
 
 ## [0.10.0] - 2026-07-27
 
