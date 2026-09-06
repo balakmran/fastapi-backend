@@ -172,11 +172,13 @@ class ServiceUnavailableError(QuoinError):
 class GatewayTimeoutError(QuoinError):
     """Gateway Timeout — request exceeded the configured wall-clock limit.
 
-    Note: TimeoutMiddleware builds the 504 RFC 9457 response directly
-    rather than raising this exception, because BaseHTTPMiddleware runs
-    outside the ExceptionMiddleware layer where registered handlers live.
-    This class exists for use in service/route code and for type-safe
-    construction of timeout error details.
+    Note: ``TimeoutMiddleware`` builds the 504 RFC 9457 response
+    directly via raw ASGI rather than raising this exception, because
+    the timeout fires from an ``anyio`` cancel scope wrapping the whole
+    middleware/router call — there is no request context left in which
+    to raise an exception for a handler to catch. This class exists for
+    use in service/route code (e.g. an outbound call that times out)
+    and for type-safe construction of timeout error details.
     """
 
     def __init__(

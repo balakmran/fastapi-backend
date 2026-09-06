@@ -44,6 +44,10 @@
   has no level filter of its own — so `DEBUG`/`INFO`/`WARNING`/`ERROR`
   were indistinguishable. `LOG_LEVEL` is also now typed as a `Literal`
   of those four values, so a typo fails fast at startup.
+- **Users**: the `q` search filter on `GET /users` now matches `%` and
+  `_` in the search term literally instead of treating them as SQL
+  `LIKE` wildcards — `q=100%` previously matched "100" followed by
+  anything, and any `_` matched an arbitrary character.
 - **Observability**: in production, `QUOIN_OTEL_ENABLED=true` with no
   `OTEL_EXPORTER_OTLP_ENDPOINT` configured no longer silently falls back
   to printing every span to stdout — interleaved with the JSON log

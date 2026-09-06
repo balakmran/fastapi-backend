@@ -312,6 +312,24 @@ async def test_list_users_filter_search(
     assert names == ["Alice"]
 
 
+async def test_list_users_filter_search_escapes_like_wildcards(
+    read_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """B7 regression: `%` and `_` in `q` are matched literally.
+
+    Unescaped, ``q=100%`` would compile to ``LIKE '%100%%'`` — matching
+    "100" followed by anything — and a bare ``_`` would match any single
+    character, turning a search into an accidental wildcard scan.
+    """
+    db_session.add(User(email="literal@example.com", full_name="100%"))
+    db_session.add(User(email="other@example.com", full_name="100x"))
+    await db_session.commit()
+
+    response = await read_client.get("/api/v1/users/?q=100%25&limit=100")
+    names = [row["full_name"] for row in response.json()["items"]]
+    assert names == ["100%"]
+
+
 async def test_repository_create_race_returns_duplicate_email_error(
     db_session: AsyncSession,
 ) -> None:
