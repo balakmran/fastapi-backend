@@ -141,9 +141,7 @@ class ProductNotFoundError(NotFoundError):
 
     def __init__(self, product_id: str) -> None:
         """Initialize ProductNotFoundError."""
-        super().__init__(
-            message=f"Product with ID '{product_id}' not found"
-        )
+        super().__init__(message=f"Product with ID '{product_id}' not found")
 
 
 class DuplicateProductNameError(ConflictError):
@@ -151,9 +149,7 @@ class DuplicateProductNameError(ConflictError):
 
     def __init__(self, name: str) -> None:
         """Initialize DuplicateProductNameError."""
-        super().__init__(
-            message=f"Product '{name}' already exists"
-        )
+        super().__init__(message=f"Product '{name}' already exists")
 ```
 
 ### 5. Implement the Repository
@@ -197,9 +193,7 @@ class ProductRepository:
         result = await self.session.exec(statement)  # type: ignore
         return result.scalars().first()
 
-    async def list(
-        self, params: PageParams
-    ) -> tuple[list[Product], int]:
+    async def list(self, params: PageParams) -> tuple[list[Product], int]:
         """List products for one page, plus the total count.
 
         Returns a ``(rows, total)`` tuple so the route can build the
@@ -259,9 +253,7 @@ class ProductService:
         """Initialize the service."""
         self.repository = repository
 
-    async def create_product(
-        self, product_create: ProductCreate
-    ) -> Product:
+    async def create_product(self, product_create: ProductCreate) -> Product:
         """Create a new product."""
         return await self.repository.create(product_create)
 
@@ -465,10 +457,9 @@ async def test_create_product(client: AsyncClient) -> None:
     assert data["name"] == "Widget"
     assert "id" in data
 
+
 async def test_get_product_not_found(client: AsyncClient) -> None:
-    response = await client.get(
-        f"/api/v1/products/{uuid.uuid4()}"
-    )
+    response = await client.get(f"/api/v1/products/{uuid.uuid4()}")
     assert response.status_code == 404
 ```
 

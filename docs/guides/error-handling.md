@@ -117,6 +117,7 @@ All application exceptions inherit from
 ```python
 from app.core.exceptions import QuoinError
 
+
 class QuoinError(Exception):
     """Base exception for all Quoin application errors."""
 
@@ -195,11 +196,13 @@ exceptions and provide rich context:
 # app/modules/user/exceptions.py
 from app.core.exceptions import ConflictError, NotFoundError
 
+
 class UserNotFoundError(NotFoundError):
     """Raised when a user cannot be found."""
 
     def __init__(self, user_id: str) -> None:
         super().__init__(message=f"User with ID '{user_id}' not found")
+
 
 class DuplicateEmailError(ConflictError):
     """Raised when attempting to create a user with an existing email."""
@@ -232,6 +235,7 @@ HTTP exceptions:
 
 ```python
 from app.modules.user.exceptions import DuplicateEmailError, UserNotFoundError
+
 
 class UserService:
     async def create_user(self, user_create: UserCreate) -> User:
@@ -294,9 +298,7 @@ The
 automatically converts `QuoinError` exceptions to RFC 9457 responses:
 
 ```python
-async def quoin_exception_handler(
-    request: Request, exc: Any
-) -> Response:
+async def quoin_exception_handler(request: Request, exc: Any) -> Response:
     problem = ProblemDetail(
         type=_problem_type(exc),
         title=_problem_title(exc.status_code),
@@ -316,9 +318,7 @@ The `validation_exception_handler` handles Pydantic validation errors
 and includes the `errors` array:
 
 ```python
-async def validation_exception_handler(
-    request: Request, exc: Any
-) -> Response:
+async def validation_exception_handler(request: Request, exc: Any) -> Response:
     # _sanitize_validation_errors runs exc.errors() through
     # jsonable_encoder (so a raising field_validator's ctx.error can't
     # crash serialisation) and drops/truncates the url/input fields.
@@ -391,9 +391,7 @@ fallback; it exists as a safety net, not a substitute for deliberate
 error handling.
 
 ```python
-async def unhandled_exception_handler(
-    request: Request, exc: Any
-) -> Response:
+async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
     logger.exception(
         "unhandled_exception",
         exc_type=type(exc).__name__,
@@ -430,21 +428,19 @@ errors:
 # app/modules/billing/exceptions.py
 from app.core.exceptions import BadRequestError, NotFoundError
 
+
 class PaymentFailedError(BadRequestError):
     """Raised when payment processing fails."""
 
     def __init__(self, payment_id: str, reason: str) -> None:
-        super().__init__(
-            message=f"Payment '{payment_id}' failed: {reason}"
-        )
+        super().__init__(message=f"Payment '{payment_id}' failed: {reason}")
+
 
 class InvoiceNotFoundError(NotFoundError):
     """Raised when an invoice cannot be found."""
 
     def __init__(self, invoice_id: str) -> None:
-        super().__init__(
-            message=f"Invoice with ID '{invoice_id}' not found"
-        )
+        super().__init__(message=f"Invoice with ID '{invoice_id}' not found")
 ```
 
 The resulting error responses will automatically use the derived URN
@@ -563,6 +559,7 @@ Test error handling at the service level:
 import pytest
 from app.modules.user.exceptions import UserNotFoundError
 
+
 async def test_get_user_not_found(user_service):
     with pytest.raises(UserNotFoundError) as exc_info:
         await user_service.get_user(uuid.uuid4())
@@ -575,15 +572,21 @@ For integration tests, validate the full RFC 9457 response:
 
 ```python
 async def test_create_user_duplicate_email(client):
-    await client.post("/api/v1/users/", json={
-        "email": "test@example.com",
-        "full_name": "Test User",
-    })
+    await client.post(
+        "/api/v1/users/",
+        json={
+            "email": "test@example.com",
+            "full_name": "Test User",
+        },
+    )
 
-    response = await client.post("/api/v1/users/", json={
-        "email": "test@example.com",
-        "full_name": "Another User",
-    })
+    response = await client.post(
+        "/api/v1/users/",
+        json={
+            "email": "test@example.com",
+            "full_name": "Another User",
+        },
+    )
 
     body = response.json()
     assert response.status_code == 409

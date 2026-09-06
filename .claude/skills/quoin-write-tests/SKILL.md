@@ -68,7 +68,9 @@ async def test_create_product_unauthenticated(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_product_returns_404_for_missing(read_client: AsyncClient):
-    response = await read_client.get("/api/v1/products/00000000-0000-0000-0000-000000000000")
+    response = await read_client.get(
+        "/api/v1/products/00000000-0000-0000-0000-000000000000"
+    )
     assert response.status_code == 404
 ```
 
@@ -95,7 +97,9 @@ def caller_products_admin() -> ServicePrincipal:
 
 @pytest.fixture
 async def products_admin_client(client, caller_products_admin):
-    fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_products_admin
+    fastapi_app.dependency_overrides[get_current_caller] = lambda: (
+        caller_products_admin
+    )
     yield client
     fastapi_app.dependency_overrides.pop(get_current_caller, None)
 ```

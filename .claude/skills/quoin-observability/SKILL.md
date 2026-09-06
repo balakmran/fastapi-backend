@@ -48,6 +48,7 @@ import structlog
 
 logger = structlog.get_logger()
 
+
 class UserService:
     async def create_user(self, user_create: UserCreate) -> User:
         user = await self.repository.create(user_create)
@@ -70,6 +71,7 @@ class UserService:
 ```python
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
+
 async def process_order(order_id: str) -> None:
     bind_contextvars(order_id=order_id, user_id=current_user.id)
     logger.info("order_processing_started")
@@ -91,6 +93,7 @@ queries, outbound HTTP):
 from opentelemetry import trace
 
 tracer = trace.get_tracer(__name__)
+
 
 class OrderService:
     async def process_order(self, order_id: str) -> None:

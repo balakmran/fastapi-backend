@@ -100,6 +100,7 @@ class QuoinError(Exception):
         self.status_code = status_code
         self.headers = headers
 
+
 class NotFoundError(QuoinError):
     def __init__(self, message: str = "Not Found"):
         super().__init__(message, status_code=404)
@@ -118,7 +119,7 @@ def setup_logging() -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer()  # dev
+            structlog.dev.ConsoleRenderer(),  # dev
             # structlog.processors.JSONRenderer()  # prod
         ],
     )
@@ -133,11 +134,13 @@ def setup_opentelemetry(app: FastAPI) -> None:
     if not settings.OTEL_ENABLED:
         return
 
-    resource = Resource.create({
-        SERVICE_NAME: metadata.APP_NAME,
-        "service.version": metadata.VERSION,
-        "deployment.environment": settings.ENV.value,
-    })
+    resource = Resource.create(
+        {
+            SERVICE_NAME: metadata.APP_NAME,
+            "service.version": metadata.VERSION,
+            "deployment.environment": settings.ENV.value,
+        }
+    )
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
     # OTLP exporter if endpoint set; otherwise console in development
@@ -162,7 +165,7 @@ Configures CORS, trusted hosts, request ID, and timeout middleware:
 
 ```python
 def configure_middlewares(app: FastAPI) -> None:
-    configure_cors(app)           # CORS from settings.BACKEND_CORS_ORIGINS
+    configure_cors(app)  # CORS from settings.BACKEND_CORS_ORIGINS
     configure_trusted_hosts(app)  # TrustedHostMiddleware
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(TimeoutMiddleware)  # outermost — added last
@@ -299,7 +302,7 @@ and tracked in `alembic/versions/`.
 app.mount(
     "/static",
     StaticFiles(directory=Path(__file__).parent / "static"),
-    name="static"
+    name="static",
 )
 ```
 
