@@ -43,6 +43,8 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 - **80-char line limit** for Python and Markdown. Tables and code blocks are exempt.
 - **Async-first** — every DB call, repository method, and service method is `async def`.
 - **Google-style docstrings** on public functions and classes.
+- **Keep code comments concise.** Explain the non-obvious *why* in a
+  line or two; don't restate what the code already says.
 - **Docs coverage on every feature change.** When adding or changing any
   user-visible behaviour (new settings, new middleware, new endpoints,
   changed defaults), update the relevant guide in `docs/guides/` — or
