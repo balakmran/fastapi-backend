@@ -13,7 +13,7 @@ from typing import Any
 
 import jwt
 import structlog
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 from pydantic import BaseModel, ConfigDict, Field
@@ -168,23 +168,36 @@ class JWKSCache:
             return self._keys[kid]
 
 
-# Module-level cache instance (initialised lazily on first request)
-_jwks_cache: JWKSCache | None = None
+def get_jwks_cache(request: Request) -> JWKSCache:
+    """Return (or lazily create) this application's JWKS cache.
 
+    Stored on ``app.state`` — mirroring ``get_http_client`` — rather than
+    a module-level global, so each application instance (real or test)
+    gets its own cache instead of sharing one process-wide singleton, and
+    a future multi-issuer setup has somewhere per-app to keep more than
+    one.
 
-def _get_jwks_cache() -> JWKSCache:
-    """Return (or create) the module-level JWKS cache."""
-    global _jwks_cache  # noqa: PLW0603
-    if _jwks_cache is None:
+    Args:
+        request: The current FastAPI request (used to access app.state).
+
+    Returns:
+        The application's :class:`JWKSCache`.
+
+    Raises:
+        UnauthorizedError: If ``QUOIN_OAUTH_JWKS_URI`` is not set.
+    """
+    cache = getattr(request.app.state, "jwks_cache", None)
+    if cache is None:
         if not settings.OAUTH_JWKS_URI:
             raise UnauthorizedError(
                 "OAuth not configured — QUOIN_OAUTH_JWKS_URI is not set"
             )
-        _jwks_cache = JWKSCache(
+        cache = JWKSCache(
             settings.OAUTH_JWKS_URI,
             min_refresh_seconds=settings.OAUTH_JWKS_MIN_REFRESH_SECONDS,
         )
-    return _jwks_cache
+        request.app.state.jwks_cache = cache
+    return cache
 
 
 # ---------------------------------------------------------------------------
@@ -240,7 +253,7 @@ class ServicePrincipal(BaseModel):
 
 
 async def validate_token(
-    token: str, client: ResilientHTTPClient
+    token: str, client: ResilientHTTPClient, cache: JWKSCache
 ) -> dict[str, Any]:
     """Validate a Bearer JWT against the configured OAuth server.
 
@@ -251,6 +264,7 @@ async def validate_token(
     Args:
         token: Raw JWT string (without "Bearer " prefix).
         client: The shared resilient HTTP client used to fetch JWKS.
+        cache: The application's JWKS cache (see ``get_jwks_cache``).
 
     Returns:
         Decoded claims dict.
@@ -280,7 +294,6 @@ async def validate_token(
         raise UnauthorizedError("Invalid token format") from exc
 
     kid = header.get("kid", "")
-    cache = _get_jwks_cache()
     public_key = await cache.get_signing_key(kid, client)
 
     decode_options: dict[str, Any] = {
@@ -323,12 +336,14 @@ async def validate_token(
 async def get_token_claims(
     credentials: HTTPAuthorizationCredentials | None = Depends(_http_bearer),
     http_client: ResilientHTTPClient = Depends(get_http_client),
+    cache: JWKSCache = Depends(get_jwks_cache),
 ) -> dict[str, Any]:
     """Extract and validate the Bearer token from the request.
 
     Args:
         credentials: HTTP Bearer credentials from the Authorization header.
         http_client: The shared resilient HTTP client (for JWKS fetches).
+        cache: The application's JWKS cache.
 
     Returns:
         Decoded JWT claims dict.
@@ -338,7 +353,7 @@ async def get_token_claims(
     """
     if credentials is None:
         raise UnauthorizedError("Authorization header is required")
-    return await validate_token(credentials.credentials, http_client)
+    return await validate_token(credentials.credentials, http_client, cache)
 
 
 async def get_current_caller(
@@ -433,6 +448,7 @@ __all__ = [
     "ServicePrincipal",
     "extract_roles",
     "get_current_caller",
+    "get_jwks_cache",
     "get_token_claims",
     "require_roles",
     "validate_token",
