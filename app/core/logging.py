@@ -5,6 +5,7 @@ from typing import Any
 
 import structlog
 from opentelemetry import trace
+from structlog.types import Processor
 
 from app.core.config import Environment, settings
 
@@ -19,6 +20,23 @@ def _add_otel_context(
         event_dict["trace_id"] = format(ctx.trace_id, "032x")
         event_dict["span_id"] = format(ctx.span_id, "016x")
     return event_dict
+
+
+# The list instance handed to structlog.configure() below. setup_logging()
+# runs on every create_app() call, not just once at process start, so this
+# is kept as one persistent list mutated in place (clear + extend) rather
+# than rebound to a fresh list each time.
+#
+# structlog.testing.capture_logs() works by mutating *this exact list
+# object* in place (see its docstring: "keep the list instance intact to
+# not break references held by bound loggers"). A module-level logger
+# cached via cache_logger_on_first_use=True captures a reference to
+# whatever list object was live at its first real log call; if
+# setup_logging() replaced that list wholesale on a later call, the
+# cached logger would keep pointing at the old, abandoned list and
+# capture_logs() -- which only ever mutates the *current* list -- would
+# silently stop seeing that logger's output.
+_processors: list[Processor] = []
 
 
 def setup_logging() -> None:
@@ -63,8 +81,13 @@ def setup_logging() -> None:
             ),  # No padding for compact logs
         ]
 
+    # Mutate the persistent list in place instead of handing configure()
+    # a new list -- see the comment on _processors above.
+    _processors.clear()
+    _processors.extend(processors)
+
     structlog.configure(
-        processors=processors,
+        processors=_processors,
         logger_factory=structlog.PrintLoggerFactory()
         if settings.ENV == Environment.development
         else structlog.stdlib.LoggerFactory(),
