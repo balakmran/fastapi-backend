@@ -1,8 +1,9 @@
 # AI-Assisted Development
 
 QuoinAPI ships with a first-class Claude Code setup. This guide covers
-everything that was configured — skills, hooks, plugins, and MCP servers —
-so you can take full advantage of it and extend it as the project evolves.
+everything that was configured — 12 skills, 2 subagents, 6 hooks, 5
+plugins, and 2 MCP servers — so you can take full advantage of it and
+extend it as the project evolves.
 
 ---
 
@@ -10,12 +11,14 @@ so you can take full advantage of it and extend it as the project evolves.
 
 The setup is layered: Claude Code reads conventions from `CLAUDE.md` on every
 turn, loads on-demand workflow skills when they match your request, fires
-hooks automatically to enforce quality and safety, and connects to live
-documentation via an MCP server.
+hooks automatically to enforce quality and safety, delegates focused
+reviews to subagents, and connects to live documentation and the dev
+database via MCP servers.
 
 ```
-CLAUDE.md              ← always-on conventions (60 lines)
+CLAUDE.md              ← always-on conventions
 .claude/skills/        ← workflow skills, loaded when triggered
+.claude/agents/        ← project subagents, own context and toolset
 .claude/hooks/         ← enforcement scripts
 .claude/settings.json  ← hook wiring + enabled plugins
 .mcp.json              ← MCP server config (committed, team-wide)
@@ -88,7 +91,8 @@ reversibility, and common autogenerate blind spots.
 "make this admin-only", "who is the caller"
 
 DDD scope syntax (`domain.action`), `require_roles()` wiring, the auth
-test triple (happy path / 403 / 401), and `api.superuser` bypass rules.
+test triple (happy path / 403 / 401), and the configurable superuser
+bypass (`QUOIN_OAUTH_SUPERUSER_ROLE` / `_ENABLED`).
 
 ### `quoin-observability`
 

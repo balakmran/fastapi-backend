@@ -171,7 +171,7 @@ class Settings(BaseSettings):
     )
 
     ENV: Environment = Environment.development
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: LogLevel = "INFO"  # DEBUG | INFO | WARNING | ERROR
     OTEL_ENABLED: bool = True
 
     # Database - constructed from individual POSTGRES_* vars

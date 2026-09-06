@@ -26,19 +26,28 @@ Tests mirror the `app/` structure:
 tests/
 ├── conftest.py                  # Shared fixtures
 ├── test_main.py                 # App factory tests
-├── test_db.py                   # Database setup tests
-├── core/
-│   ├── test_exceptions.py       # Exception classes
-│   └── test_exception_handlers.py
-├── modules/
-│   ├── system/
-│   │   └── test_routes.py       # Integration tests
-│   └── user/
-│       ├── test_models.py       # Model validation
-│       ├── test_repository.py   # Database operations
-│       ├── test_service.py      # Business logic
-│       └── test_routes.py       # API endpoints
+├── test_db.py                   # Session and engine tests
+├── test_migration_guard.py      # Migration safety checks
+├── test_scaffold_module.py      # `just new` output
+├── core/                        # config, security, middlewares,
+│   └── ...                      # logging, telemetry, pagination, ...
+├── http/
+│   └── test_client.py           # Outbound client (retries, breaker)
+└── modules/
+    ├── system/
+    │   └── test_routes.py       # Health and readiness endpoints
+    └── user/
+        ├── test_models.py       # Model validation
+        ├── test_routes.py       # API endpoints
+        ├── test_exceptions.py   # Module exception classes
+        └── test_concurrency.py  # Cross-transaction races
 ```
+
+The `user` module has no `test_service.py` or `test_repository.py`: both
+layers are covered through `test_routes.py`, which drives them through
+the API against a real database and calls the repository directly for
+edge cases. Split them out when a layer grows logic worth testing on its
+own.
 
 ---
 
@@ -192,6 +201,11 @@ These fixtures work by injecting a `ServicePrincipal` with the appropriate roles
 
 ## Testing Patterns
 
+The service, repository, and fixture snippets below are illustrative
+patterns, not files in this repo — their fixtures (`user_service`,
+`user_repository`, `user_create`) come with them. Only the route and
+model examples mirror real files.
+
 ### Integration Tests (Routes)
 
 Test the full request-response cycle:
@@ -245,7 +259,7 @@ async def test_create_user_duplicate_email(admin_client: AsyncClient):
 Test business logic in isolation:
 
 ```python
-# tests/modules/user/test_service.py
+# tests/modules/user/test_service.py (example)
 import pytest
 from app.core.exceptions import ConflictError, NotFoundError
 
@@ -275,7 +289,7 @@ async def test_get_user_not_found_raises(user_service: UserService):
 Test database operations:
 
 ```python
-# tests/modules/user/test_repository.py
+# tests/modules/user/test_repository.py (example)
 async def test_create_user(
     user_repository: UserRepository,
     user_create: UserCreate,
@@ -331,7 +345,7 @@ def test_user_create_invalid_email():
 Create reusable data fixtures:
 
 ```python
-# tests/modules/user/conftest.py
+# tests/modules/user/conftest.py (example)
 @pytest.fixture
 def user_create() -> UserCreate:
     return UserCreate(

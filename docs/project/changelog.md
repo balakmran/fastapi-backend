@@ -35,10 +35,13 @@
 
 ### Changed
 
+- **Testing**: `just check` now enforces **100% branch coverage**
+  (`fail_under = 100` in `pyproject.toml`); any uncovered line fails the
+  build. **Manual reconciliation**: a generated project below 100% must
+  add the missing tests, or relax `fail_under`, after `copier update`.
 - **Security**: the JWKS cache now lives on `app.state`, created
   lazily per application instance, instead of a process-wide module
   global — matching the shared HTTP client.
-
 - **Dependencies**: transitive lock refresh (`uv lock --upgrade`); no
   direct pins changed. `just audit` reports no known vulnerabilities.
 

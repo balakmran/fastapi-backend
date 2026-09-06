@@ -86,11 +86,13 @@ rule below takes full effect starting at `1.0.0`.
   [architecture overview](../architecture/overview.md) documents this
   layering. Keeping the two separate is what lets `copier update`
   diffs stay small.
-- This is currently a manually-maintained guarantee, not a CI-enforced
-  one: there is no automated job yet that generates a project from the
-  previous tag, runs `copier update` to `HEAD`, and asserts
-  `just check` still passes. Treat the guarantees above as best-effort
-  until that lands.
+- CI proves the mechanism, not the polish. The `Copier Update Check`
+  workflow (`just verify-template-update`) generates a project from the
+  previous release tag, runs `copier update` to the new tag, and fails on
+  leftover `.rej` conflicts — but it fires **only on release tags**, and it
+  does not run `just check` inside the generated project. Whether a fresh
+  scaffold passes its own quality gate is still verified by hand at release
+  time.
 
 ## Deprecation & removal (template surface)
 
