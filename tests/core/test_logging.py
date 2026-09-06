@@ -63,8 +63,7 @@ def test_setup_logging_not_dev() -> None:
         # Verify root logger handlers were cleared and new handler added
         mock_root_logger.handlers.clear.assert_called_once()
         mock_root_logger.addHandler.assert_called_once()
-        # B4 regression: the root logger's level follows QUOIN_LOG_LEVEL
-        # rather than a hardcoded logging.INFO.
+        # B4 regression: the level follows QUOIN_LOG_LEVEL.
         mock_root_logger.setLevel.assert_called_with("WARNING")
 
 
@@ -92,12 +91,7 @@ def test_setup_logging_dev_leaves_stdlib_logging_alone() -> None:
 
 
 def test_log_level_filters_below_threshold() -> None:
-    """QUOIN_LOG_LEVEL actually suppresses logs below its threshold.
-
-    B4 regression: previously nothing read the setting, so
-    ``structlog.stdlib.BoundLogger`` (no level filter of its own) meant
-    DEBUG/INFO/WARNING/ERROR all behaved identically.
-    """
+    """B4 regression: QUOIN_LOG_LEVEL suppresses logs below itself."""
     try:
         with patch("app.core.logging.settings.LOG_LEVEL", "WARNING"):
             setup_logging()
@@ -106,9 +100,7 @@ def test_log_level_filters_below_threshold() -> None:
                 logger.info("suppressed")
                 logger.warning("emitted")
     finally:
-        # Restore the suite's normal configuration now that the patch
-        # controlling it has been reverted, so later tests relying on
-        # the default wrapper_class/processors are unaffected.
+        # Restore the suite's normal configuration for later tests.
         setup_logging()
 
     events = [entry["event"] for entry in cap_logs]

@@ -20,20 +20,10 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     """Lowercase every existing email value.
 
-    The case-insensitive unique index (`f2f495892c21`) enforces
-    uniqueness of `lower(email)` going forward, but never backfilled
-    existing rows, so a row written before that migration (or before
-    `UserBase`'s `field_validator` started normalising on write) could
-    still hold mixed-case characters. `UserRepository.get_by_email` now
-    compares via `lower(email)` regardless, but this backfill keeps the
-    stored value itself consistent with every row created since.
-
-    Safe to run unconditionally and idempotent: only the byte case of
-    already-lowercase values is touched, so re-running this migration
-    is a no-op. It cannot violate the unique index, because the index
-    is already defined over `lower(email)` — two rows differing only
-    by case are already rejected as duplicates today, exactly as they
-    would be if the column were lowercased from the start.
+    The case-insensitive unique index (`f2f495892c21`) enforced
+    uniqueness of `lower(email)` going forward but never backfilled
+    existing rows. Idempotent, and it cannot violate that index, which
+    already rejects two rows differing only by case.
     """
     op.execute("UPDATE users SET email = lower(email)")
 

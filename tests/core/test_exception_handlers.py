@@ -51,12 +51,7 @@ class _ValidatedBody(pydantic.BaseModel):
 
 @pytest.mark.asyncio
 async def test_request_validator_raising_value_error_returns_422() -> None:
-    """B2 regression: a raising field_validator yields 422, not 500.
-
-    Pydantic puts the raised exception itself under ``ctx.error`` for
-    this case, which crashed the 422 handler's JSON serialisation before
-    the fix and surfaced as an internal 500.
-    """
+    """B2 regression: a raising field_validator yields 422, not 500."""
     app = create_app()
 
     @app.post("/test-validated-body")
@@ -98,13 +93,7 @@ async def test_validation_error_input_is_truncated() -> None:
 
 @pytest.mark.asyncio
 async def test_oversize_non_string_input_is_dropped_not_retyped() -> None:
-    """An over-long structured `input` is dropped, never turned into a str.
-
-    Truncating a dict or list to a string would make the JSON type of
-    `errors[].input` depend on the value's size — an object for a small
-    payload, a string for a large one — and the truncated Python `repr`
-    isn't valid JSON for a client to parse anyway.
-    """
+    """An over-long structured `input` is dropped, not turned into a str."""
     app = create_app()
 
     @app.post("/test-structured-input")
@@ -132,12 +121,7 @@ async def test_oversize_non_string_input_is_dropped_not_retyped() -> None:
 
 
 def test_sanitize_validation_errors_tolerates_missing_input() -> None:
-    """An error dict without an `input` key passes through untouched.
-
-    Not every error shape Pydantic can produce carries `input` (e.g. one
-    hand-built by a custom handler), so the sanitizer must not assume
-    the key is always present.
-    """
+    """An error dict without an `input` key passes through untouched."""
     errors = [{"loc": ("body", "name"), "msg": "field required", "url": "x"}]
 
     sanitized = _sanitize_validation_errors(errors)

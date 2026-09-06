@@ -45,11 +45,9 @@ def setup_opentelemetry(app: FastAPI) -> None:
     if not settings.OTEL_ENABLED:
         return
 
-    # Resource.create (unlike a bare Resource(...)) also runs the
-    # standard OTel resource detectors, so OTEL_RESOURCE_ATTRIBUTES and
-    # OTEL_SERVICE_NAME still contribute attributes — but the values
-    # below always win, since Resource.merge lets the updating side
-    # override the base one.
+    # Resource.create, unlike a bare Resource(...), also runs the standard
+    # detectors, so OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME still
+    # contribute — though the explicit values below win over them.
     resource = Resource.create(
         {
             SERVICE_NAME: metadata.APP_NAME,
@@ -64,10 +62,8 @@ def setup_opentelemetry(app: FastAPI) -> None:
         exporter = OTLPSpanExporter()
         provider.add_span_processor(BatchSpanProcessor(exporter))
     elif settings.ENV == Environment.production:
-        # No collector configured: printing every span to stdout would
-        # interleave them with the JSON log stream and cost log-pipeline
-        # volume for spans nobody collects. Warn once and export nothing
-        # rather than silently defaulting to the console exporter.
+        # Falling back to the console here would interleave every span
+        # with the JSON log stream, for spans nobody collects.
         logger.warning(
             "otel_enabled_without_exporter",
             detail=(

@@ -15,17 +15,12 @@ class Environment(StrEnum):
     production = "production"
 
 
-#: Supported `QUOIN_LOG_LEVEL` values, matching the four levels the
-#: configuration guide documents. Case-insensitive on input — see
-#: `Settings._normalize_log_level`.
+#: Supported `QUOIN_LOG_LEVEL` values; case-insensitive on input.
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
-# Resolve environment before Settings loads. Only the QUOIN_-prefixed
-# variable is honoured — a bare ENV is deliberately NOT read here, so it
-# can't select a differently-named env file (e.g. .env.production) while
-# leaving Settings.ENV itself at its "development" default below, which
-# would silently skip the production fail-fast checks and docs-disable
-# guard that key off Settings.ENV.
+# Only QUOIN_ENV is read. A bare ENV would select a different env file
+# while Settings.ENV below stayed "development", skipping the production
+# fail-fast checks and docs-disable guard that key off it.
 env = Environment(os.getenv("QUOIN_ENV", Environment.development))
 
 # Select env file based on environment
@@ -64,21 +59,15 @@ class Settings(BaseSettings):
     def _normalize_log_level(cls, value: object) -> object:
         """Upper-case the log level so `debug` is accepted as `DEBUG`.
 
-        `LOG_LEVEL` is a `Literal`, and pydantic matches those exactly,
-        so without this a lower-case value — the common convention in
-        many deployment configs, and silently tolerated back when the
-        setting was a plain `str` — would fail validation. Because
-        `settings` is constructed at import time, that failure would
-        crash not just the API but anything importing this module,
-        Alembic included. Genuine typos still fail, which is the point
-        of the `Literal`.
+        Pydantic matches a `Literal` exactly, and `settings` is built at
+        import time, so an unmatched case would crash anything importing
+        this module — Alembic included. Genuine typos still fail.
 
         Args:
             value: The raw value from the environment or an `.env` file.
 
         Returns:
-            The upper-cased value if it is a string, else unchanged so
-            pydantic reports the type error itself.
+            The upper-cased value if it is a string, else unchanged.
         """
         return value.upper() if isinstance(value, str) else value
 

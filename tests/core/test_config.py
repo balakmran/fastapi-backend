@@ -109,14 +109,7 @@ def test_env_file_selection_default() -> None:
 
 
 def test_bare_env_var_is_ignored_for_file_selection() -> None:
-    """B5 regression: a bare ENV must not select a different env file.
-
-    Previously a bare ``ENV=production`` (no ``QUOIN_`` prefix) picked
-    ``.env.production`` while ``Settings.ENV`` itself — read only from
-    ``QUOIN_ENV`` — stayed at its "development" default, silently
-    skipping the production fail-fast checks and docs-disable guard
-    while the process loaded production credentials.
-    """
+    """B5 regression: a bare ENV must not select a different env file."""
     with patch.dict(os.environ, {"ENV": "production"}, clear=True):
         from app.core import config  # noqa: PLC0415
 
