@@ -81,13 +81,9 @@ async def get_session(
             raise
 
 
-# ``scope="function"`` closes this dependency's generator — running the
-# commit/rollback above — before the route handler's return value is
-# turned into a response and sent, not after (FastAPI's default
-# ``scope="request"`` defers yield-dependency exit until the response has
-# already gone out over the wire). Without this, a client can receive a
-# 2xx for a write whose COMMIT has not happened yet — or ever will, if it
-# fails. Every route needing a database session should depend on
-# ``SessionDep`` rather than calling ``Depends(get_session)`` directly, so
-# this scope decision lives in one place.
+# ``scope="function"`` runs the commit/rollback above before the response
+# is sent; FastAPI's default defers it until after. Without it a client
+# can receive a 2xx for a write whose COMMIT has not happened yet — or
+# ever will, if it fails. Depend on ``SessionDep`` rather than
+# ``Depends(get_session)`` so that decision lives in one place.
 SessionDep = Annotated[AsyncSession, Depends(get_session, scope="function")]

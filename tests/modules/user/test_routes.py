@@ -315,12 +315,7 @@ async def test_list_users_filter_search(
 async def test_list_users_filter_search_escapes_like_wildcards(
     read_client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    """B7 regression: `%` and `_` in `q` are matched literally.
-
-    Unescaped, ``q=100%`` would compile to ``LIKE '%100%%'`` — matching
-    "100" followed by anything — and a bare ``_`` would match any single
-    character, turning a search into an accidental wildcard scan.
-    """
+    """B7 regression: `%` and `_` in `q` are matched literally."""
     db_session.add(User(email="literal@example.com", full_name="100%"))
     db_session.add(User(email="other@example.com", full_name="100x"))
     await db_session.commit()
@@ -400,13 +395,10 @@ async def test_repository_update_other_integrity_error_propagates() -> None:
 async def test_get_by_email_matches_legacy_mixed_case_row(
     db_session: AsyncSession,
 ) -> None:
-    """B8 regression: get_by_email matches a row with mixed-case email.
+    """B8 regression: get_by_email matches a mixed-case legacy row.
 
-    New rows are normalised to lowercase by ``UserBase``'s
-    ``field_validator``, but a row written before that validator
-    existed — or by any future path that bypasses it — could still
-    hold mixed case. Constructing the ``User`` model directly (instead
-    of through ``UserCreate``) simulates exactly that legacy row.
+    Building the model directly, rather than through ``UserCreate``,
+    bypasses the normalising validator the way a legacy row would.
     """
     db_session.add(User(email="Mixed-Case@Example.com"))
     await db_session.commit()

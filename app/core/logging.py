@@ -68,10 +68,8 @@ def setup_logging() -> None:
         logger_factory=structlog.PrintLoggerFactory()
         if settings.ENV == Environment.development
         else structlog.stdlib.LoggerFactory(),
-        # make_filtering_bound_logger enforces QUOIN_LOG_LEVEL uniformly
-        # across every environment (it accepts the level name directly)
-        # — structlog.stdlib.BoundLogger has no level filter of its own,
-        # which previously made the setting a no-op everywhere.
+        # The filtering wrapper is what enforces QUOIN_LOG_LEVEL;
+        # structlog.stdlib.BoundLogger has no level filter of its own.
         wrapper_class=structlog.make_filtering_bound_logger(settings.LOG_LEVEL),
         cache_logger_on_first_use=True,
     )
@@ -93,5 +91,4 @@ def setup_logging() -> None:
         root_logger = logging.getLogger()
         root_logger.handlers.clear()
         root_logger.addHandler(handler)
-        # Logger.setLevel accepts the level name directly ("DEBUG", ...).
         root_logger.setLevel(settings.LOG_LEVEL)

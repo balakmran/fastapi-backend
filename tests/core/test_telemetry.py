@@ -128,14 +128,7 @@ class TestSetupOpenTelemetry:
 
     @mock.patch.object(settings, "OTEL_ENABLED", True)
     def test_resource_carries_service_version_and_environment(self):
-        """B10 regression: the Resource carries version and environment.
-
-        A bare ``Resource(attributes=...)`` only ever carried
-        ``service.name`` and bypassed the standard
-        ``OTEL_RESOURCE_ATTRIBUTES``/``OTEL_SERVICE_NAME`` detectors
-        entirely; ``Resource.create`` both adds version/environment and
-        still runs those detectors.
-        """
+        """B10 regression: the Resource carries version and environment."""
         mock_app = MagicMock()
 
         with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}):
@@ -158,10 +151,7 @@ class TestSetupOpenTelemetry:
     @mock.patch.object(settings, "OTEL_ENABLED", True)
     @mock.patch.object(settings, "ENV", Environment.production)
     def test_setup_production_without_exporter_warns_and_skips_console(self):
-        """B6 regression: production with no OTLP endpoint warns.
-
-        Instead of silently defaulting to the console exporter.
-        """
+        """B6 regression: production without an OTLP endpoint warns."""
         mock_app = MagicMock()
 
         with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}):

@@ -843,11 +843,8 @@ async def test_unhandled_error_after_response_started_reraises() -> None:
     assert len(starts) == 1
     assert starts[0]["status"] == status.HTTP_200_OK
 
-    # Silent on this path by design: the re-raised exception reaches
-    # Starlette's ServerErrorMiddleware, which calls the registered
-    # Exception handler unconditionally, and that handler logs
-    # unhandled_exception itself. Logging here too would emit the event
-    # twice for a single exception.
+    # Silent by design: the outer Exception handler logs this one, so
+    # logging here too would emit the event twice.
     assert not [e for e in cap_logs if e["event"] == "unhandled_exception"]
 
 
@@ -855,14 +852,7 @@ async def test_unhandled_error_after_response_started_reraises() -> None:
 async def test_unhandled_exception_500_carries_cors_and_security_headers() -> (
     None
 ):
-    """A 500 from an unhandled exception still gets CORS/security/RID.
-
-    Regression check: Starlette moves a bare-``Exception`` handler to
-    ``ServerErrorMiddleware``, *above* every middleware this module
-    configures, so without ``UnhandledErrorMiddleware`` the resulting
-    500 would carry none of these headers — the same defect class
-    already fixed for 504/413/400.
-    """
+    """A 500 from an unhandled exception still gets CORS/security/RID."""
     app = create_app()
 
     @app.get("/test-unhandled-wrapped")

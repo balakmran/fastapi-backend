@@ -34,31 +34,18 @@ def _safe_request_id(raw: str | None) -> str:
 class _ResponseStartedTracker:
     """Wrap an ASGI ``send`` and record whether the response has started.
 
-    Both ``UnhandledErrorMiddleware`` and ``TimeoutMiddleware`` need the
-    same signal: once ``http.response.start`` has gone out, the headers
-    are on the wire and a manufactured error response can no longer
-    replace them. Keeping the wrapper here means that rule is defined
-    once rather than re-derived in each middleware that needs it.
-
-    A class rather than a closure so it captures only the ``send``
-    callable, not the whole enclosing request scope.
+    Once ``http.response.start`` is on the wire, a manufactured error
+    response can no longer replace it — the signal both
+    ``UnhandledErrorMiddleware`` and ``TimeoutMiddleware`` need.
     """
 
     def __init__(self, send: Send) -> None:
-        """Wrap ``send``, starting in the not-yet-started state.
-
-        Args:
-            send: The downstream ASGI send callable to forward to.
-        """
+        """Wrap ``send``, starting in the not-yet-started state."""
         self._send = send
         self.started = False
 
     async def send(self, message: Message) -> None:
-        """Forward one message, flagging the response as started.
-
-        Args:
-            message: The ASGI message to forward downstream.
-        """
+        """Forward one message, flagging the response as started."""
         if message["type"] == "http.response.start":
             self.started = True
         await self._send(message)
@@ -67,30 +54,18 @@ class _ResponseStartedTracker:
 class UnhandledErrorMiddleware:
     """Last-resort safety net: turn an unhandled exception into a 500.
 
-    Starlette pulls any handler registered for the bare ``Exception``
-    type out of the ordinary exception-handling chain and hands it to
-    ``ServerErrorMiddleware`` instead — the *outermost* layer, installed
-    above every middleware configured in this module. By the time that
-    layer runs, the exception has already unwound past every middleware
-    below it without any of them ever calling their wrapped ``send``, so
-    the 500 response it builds carries no ``X-Request-ID``, no security
-    headers, and no CORS headers either (Starlette's ``CORSMiddleware``
-    only adds them to a message it actually sees go out). This is the
-    same class of defect the ordering in ``configure_middlewares``
-    already fixes for 504/413/400 — the 500 path was the one case that
-    ordering could not reach, because it happens above this module's
-    layers rather than within them.
+    Starlette hands any handler registered for the bare ``Exception``
+    type to ``ServerErrorMiddleware``, the outermost layer of all. By
+    the time it runs, the exception has unwound past every middleware
+    here without any of them seeing a response go out, so its 500
+    carries no ``X-Request-ID``, security, or CORS headers.
 
-    Registered innermost of all — closest to the router — so an
-    unhandled exception is caught here and its 500 problem response is
-    sent through the very ``send`` callable the outer middlewares
-    (CORS, RequestID, SecurityHeaders, ...) already wrapped, letting
-    their header injection run the normal way instead of being
-    bypassed. The Starlette-level ``Exception`` handler
-    (``app.core.exception_handlers.unhandled_exception_handler``) stays
-    registered as a further fallback — for an exception raised by a
-    middleware itself (above this layer) or for a non-HTTP scope, which
-    this class ignores.
+    Catching innermost instead — closest to the router — means the 500
+    is sent through the ``send`` those middlewares already wrapped, so
+    their header injection runs normally.
+    ``app.core.exception_handlers.unhandled_exception_handler`` stays
+    registered for what this layer cannot see: an exception raised by a
+    middleware above it, and non-HTTP scopes.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -111,19 +86,11 @@ class UnhandledErrorMiddleware:
             await self.app(scope, receive, tracker.send)
         except Exception as exc:
             if tracker.started:
-                # Headers already on the wire — nothing left to do but
-                # let the outer ServerErrorMiddleware abort the
-                # connection, mirroring TimeoutMiddleware's own
-                # already-started handling below. Deliberately logged
-                # *after* this guard: ServerErrorMiddleware calls the
-                # registered Exception handler unconditionally (it only
-                # gates the send on whether the response started), and
-                # that handler logs `unhandled_exception` itself — so
-                # logging here too would emit the event twice for one
-                # exception and double every error count derived from
-                # it. The handler's line loses the bound `request_id`,
-                # which is the price of exactly-once logging on this
-                # rare already-streaming path.
+                # Headers already sent, so let the abort propagate. No
+                # log here: ServerErrorMiddleware always calls the
+                # registered Exception handler (it only gates the send),
+                # and that handler logs the event itself — logging here
+                # too would emit it twice for one exception.
                 raise
             logger.exception(
                 "unhandled_exception",
@@ -132,17 +99,13 @@ class UnhandledErrorMiddleware:
             )
             problem = ProblemDetail(
                 type="urn:quoin:error:internal_server_error",
-                # Via the shared helper, so the title cannot drift from
-                # the one unhandled_exception_handler builds.
                 title=_problem_title(500),
                 status=500,
                 detail="Internal Server Error",
                 instance=scope.get("path", ""),
             )
-            # close=True for the same reason the 413 path sets it: the
-            # request body may still be unread when the handler blew up,
-            # and a reused keep-alive connection would then start its
-            # next request mid-body.
+            # close: the request body may still be unread, so a reused
+            # keep-alive connection would start its next request mid-body.
             await _send_problem(send, problem, 500, close=True)
 
 
@@ -537,12 +500,6 @@ def configure_middlewares(app: FastAPI) -> None:
     UnhandledErrorMiddleware and the in-flight counter are added first
     of all, so they sit innermost — closest to the router — and bracket
     only requests that pass every outer layer and reach a handler.
-    UnhandledErrorMiddleware sits innermost of the two so its own 500
-    response passes through as few layers as possible before reaching
-    the CORS/security/request-ID headers it depends on; either order
-    releases the in-flight counter correctly, since InFlightRequest's
-    own ``finally`` runs regardless of whether the call beneath it
-    returned a response or propagated an exception.
 
     AccessLog is added just before RequestID, so it sits inside
     RequestID (the ``request_id`` contextvar is bound before it runs)

@@ -116,13 +116,8 @@ class UserRepository:
         Returns:
             The matching live User, or None if not found or deleted.
         """
-        # Compare via lower(email) rather than the stored value directly.
-        # New rows are already normalised by UserBase's field_validator,
-        # but a legacy row written before that validator existed (or by
-        # any future path that bypasses it, e.g. a raw insert) could
-        # still hold mixed case; matching on lower(email) keeps lookups
-        # correct regardless. This also matches the case-insensitive
-        # unique index's own definition (`lower(email)`).
+        # Match on lower(email), like the unique index itself, so a
+        # legacy row holding mixed case is still found.
         statement = select(User).where(
             func.lower(User.email) == email.lower(),
             User.deleted_at.is_(None),  # type: ignore
@@ -156,11 +151,8 @@ class UserRepository:
         if is_active is not None:
             statement = statement.where(User.is_active == is_active)  # type: ignore
         if q:
-            # autoescape=True escapes literal %, _, and the escape
-            # character itself in the search term, so a value like
-            # "100%" matches that literal substring instead of "100"
-            # followed by any characters — and `_` no longer matches
-            # any single character either.
+            # autoescape so % and _ in the term match literally rather
+            # than acting as LIKE wildcards.
             term = q.lower()
             statement = statement.where(
                 or_(

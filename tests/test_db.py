@@ -104,15 +104,7 @@ async def test_get_session_rolls_back_and_reraises_on_error():
 
 @pytest.mark.asyncio
 async def test_session_dep_commits_before_response_is_sent() -> None:
-    """B1 regression: SessionDep's commit runs before the response is sent.
-
-    FastAPI's default yield-dependency scope (``"request"``) closes the
-    dependency generator *after* the response has already gone out over
-    the wire, so without an explicit ``scope="function"`` a client could
-    receive a 2xx for a write whose COMMIT has not happened yet. This
-    drives a real route through the ASGI layer and asserts the commit is
-    observed strictly before ``http.response.start`` is sent.
-    """
+    """B1 regression: SessionDep commits before the response is sent."""
     events: list[str] = []
 
     mock_session = AsyncMock()

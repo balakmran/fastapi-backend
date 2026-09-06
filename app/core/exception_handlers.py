@@ -15,14 +15,11 @@ logger = structlog.get_logger(__name__)
 
 _PROBLEM_MEDIA_TYPE = "application/problem+json"
 
-# Cap on the serialised length of a reflected `input` value in a 422
-# body, so a validation error never echoes an unbounded amount of
-# client-supplied data back into the response.
+# Cap on a reflected `input` value in a 422 body, so a validation error
+# never echoes an unbounded amount of client data back to the client.
 _MAX_INPUT_CHARS = 200
 
-#: Sentinel returned by `_truncate_input` for a non-string value too
-#: large to reflect: the caller drops the `input` key entirely rather
-#: than substituting a value of a different JSON type.
+#: Signals that `input` should be dropped rather than reflected.
 _OMIT_INPUT = object()
 
 # CPython's HTTPStatus.phrase wording tracks RFC updates (e.g. 422's
@@ -112,22 +109,18 @@ async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
 def _truncate_input(value: Any) -> Any:
     """Cap the serialised length of a reflected validation `input` value.
 
-    Truncation never changes the JSON type of the reflected value. A
-    string is shortened to a string; a structure (object, array) that is
-    too large to reflect is dropped entirely rather than replaced by a
-    truncated stand-in, so a client parsing ``errors[].input`` never
-    finds an object silently turned into a string purely because it was
-    big. Dropping also avoids emitting a cut-off Python ``repr``, which
-    is not valid JSON syntax and so is useless to a client anyway.
+    Never changes the value's JSON type: a string is shortened, but an
+    over-long object or array is dropped rather than replaced by a
+    truncated stand-in, which would make the type of ``errors[].input``
+    depend on the value's size — and a cut-off Python ``repr`` isn't
+    valid JSON for a client to parse anyway.
 
     Args:
-        value: A JSON-safe value (already passed through
-            ``jsonable_encoder``).
+        value: A JSON-safe value (already through ``jsonable_encoder``).
 
     Returns:
-        ``value`` unchanged if it fits within ``_MAX_INPUT_CHARS``, a
-        truncated string if ``value`` is an over-long string, else
-        ``_OMIT_INPUT`` to signal the caller should drop the key.
+        ``value`` if it fits, a truncated string if it is an over-long
+        string, else ``_OMIT_INPUT``.
     """
     if isinstance(value, str):
         if len(value) <= _MAX_INPUT_CHARS:
@@ -143,27 +136,21 @@ def _sanitize_validation_errors(
 ) -> list[dict[str, Any]]:
     """Make validation errors JSON-safe and trim what they reveal.
 
-    Pydantic's documented custom-validation idiom — a ``field_validator``
-    raising ``ValueError`` or ``AssertionError`` — puts the raised
-    exception object itself under ``ctx.error``. That is not
-    JSON-serializable, so building the response with a bare
-    ``model_dump_json`` raises and this 422 path would itself surface as
-    an internal 500. ``jsonable_encoder`` is FastAPI's own fallback for
-    this: it stringifies anything it cannot otherwise encode.
+    A ``field_validator`` raising ``ValueError`` — Pydantic's documented
+    idiom — puts the exception object itself under ``ctx.error``, which
+    is not JSON-serializable, so serialising it directly would turn this
+    422 into a 500. ``jsonable_encoder`` stringifies whatever it cannot
+    otherwise encode.
 
-    Also drops ``url`` (a link into Pydantic's own docs, not useful to an
-    API client) and truncates ``input`` (see ``_truncate_input``), so a
-    validation error never echoes an unbounded amount of client-supplied
-    data — or a stray secret pasted into the wrong field — back into the
-    response body. An over-long ``input`` that isn't a string is dropped
-    rather than truncated, keeping the field's JSON type stable.
+    Also drops ``url`` (a link into Pydantic's docs) and bounds ``input``
+    (see ``_truncate_input``), so an error never echoes an unbounded
+    amount of client data — or a secret pasted into the wrong field.
 
     Args:
         errors: Raw error dicts from ``exc.errors()``.
 
     Returns:
-        JSON-safe error dicts with `url` removed and `input` truncated,
-        dropped, or left as-is.
+        JSON-safe error dicts with `url` removed and `input` bounded.
     """
     sanitized: list[dict[str, Any]] = []
     for error in jsonable_encoder(errors):
