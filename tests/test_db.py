@@ -1,11 +1,19 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
+from starlette.types import Message, Receive, Scope, Send
 
 from app.core.config import settings
 from app.core.exceptions import InternalServerError
-from app.db.session import create_db_engine, create_session_factory, get_session
+from app.db.session import (
+    SessionDep,
+    create_db_engine,
+    create_session_factory,
+    get_session,
+)
 from app.main import app as fastapi_app
 from app.modules.user.models import User
 
@@ -92,3 +100,54 @@ async def test_get_session_rolls_back_and_reraises_on_error():
 
     mock_session.rollback.assert_awaited_once()
     mock_session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_session_dep_commits_before_response_is_sent() -> None:
+    """B1 regression: SessionDep's commit runs before the response is sent.
+
+    FastAPI's default yield-dependency scope (``"request"``) closes the
+    dependency generator *after* the response has already gone out over
+    the wire, so without an explicit ``scope="function"`` a client could
+    receive a 2xx for a write whose COMMIT has not happened yet. This
+    drives a real route through the ASGI layer and asserts the commit is
+    observed strictly before ``http.response.start`` is sent.
+    """
+    events: list[str] = []
+
+    mock_session = AsyncMock()
+
+    async def fake_commit() -> None:
+        events.append("commit")
+
+    mock_session.commit = fake_commit
+    mock_session.__aenter__.return_value = mock_session
+    mock_session.__aexit__.return_value = False
+
+    app = FastAPI()
+    app.state.session_factory = Mock(return_value=mock_session)
+
+    @app.get("/probe")
+    async def probe(session: SessionDep) -> dict[str, bool]:
+        assert session is mock_session
+        events.append("handler")
+        return {"ok": True}
+
+    async def tracking_app(
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+    ) -> None:
+        async def tracking_send(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                events.append("response-start")
+            await send(message)
+
+        await app(scope, receive, tracking_send)
+
+    transport = ASGITransport(app=tracking_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.get("/probe")
+
+    assert response.status_code == 200  # noqa: PLR2004
+    assert events == ["handler", "commit", "response-start"]

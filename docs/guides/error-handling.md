@@ -75,12 +75,20 @@ Validation errors include an `errors` array (RFC 9457 extension):
       "type": "string_type",
       "loc": ["body", "email"],
       "msg": "Input should be a valid string",
-      "input": 42,
-      "url": "https://errors.pydantic.dev/..."
+      "input": 42
     }
   ]
 }
 ```
+
+Each error is passed through `jsonable_encoder` before serialising —
+Pydantic's documented `field_validator` idiom (raise `ValueError` or
+`AssertionError`) puts the raised exception object itself under
+`ctx.error`, which is not JSON-serializable on its own — and is trimmed
+of two things Pydantic's own `exc.errors()` includes: `url` (a link into
+Pydantic's docs, not useful to an API client) is dropped, and `input`
+is truncated to 200 characters so a validation error never echoes an
+unbounded amount of client-supplied data back into the response.
 
 ---
 
@@ -311,13 +319,17 @@ and includes the `errors` array:
 async def validation_exception_handler(
     request: Request, exc: Any
 ) -> Response:
+    # _sanitize_validation_errors runs exc.errors() through
+    # jsonable_encoder (so a raising field_validator's ctx.error can't
+    # crash serialisation) and drops/truncates the url/input fields.
+    errors = _sanitize_validation_errors(exc.errors())
     problem = ProblemDetail(
         type="urn:quoin:error:validation_error",
         title=_problem_title(422),  # "Unprocessable Content" per RFC 9110
         status=422,
         detail="Request validation failed",
         instance=request.url.path,
-        errors=exc.errors(),
+        errors=errors,
     )
     return Response(
         content=problem.model_dump_json(exclude_none=True),

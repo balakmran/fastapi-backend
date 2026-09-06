@@ -2,7 +2,6 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.openapi import (
     DEFAULT_ERROR_RESPONSES,
@@ -11,7 +10,7 @@ from app.core.openapi import (
 )
 from app.core.pagination import Page, PageParams
 from app.core.security import ServicePrincipal, require_roles
-from app.db.session import get_session
+from app.db.session import SessionDep
 from app.modules.user.models import User
 from app.modules.user.repository import UserRepository
 from app.modules.user.schemas import UserCreate, UserRead, UserUpdate
@@ -24,9 +23,7 @@ router = APIRouter(
 )
 
 
-def get_user_service(
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> UserService:
+def get_user_service(session: SessionDep) -> UserService:
     """Get the user service."""
     repository = UserRepository(session)
     return UserService(repository)
