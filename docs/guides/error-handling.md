@@ -345,15 +345,13 @@ an *internal* model failed to validate (a server bug, not a client
 mistake), so it deliberately falls through to the catch-all handler
 below and comes back as a 500, not a misleading 422.
 
-### Catch-all handler (uncaught exceptions)
+### Catch-all for uncaught exceptions
 
-A catch-all `unhandled_exception_handler` is registered against the base
-`Exception` type. It guarantees that **any** error not caught by a more
-specific handler — a bare `KeyError`, or a non-transport `httpx` error
-such as `httpx.InvalidURL` / `httpx.TooManyRedirects` that escapes the
-outbound HTTP client — still returns an RFC 9457
-`application/problem+json` 500 instead of Starlette's default
-`text/plain` `Internal Server Error`:
+**Any** error not caught by a more specific handler — a bare `KeyError`,
+or a non-transport `httpx` error such as `httpx.InvalidURL` /
+`httpx.TooManyRedirects` that escapes the outbound HTTP client — still
+returns an RFC 9457 `application/problem+json` 500 instead of
+Starlette's default `text/plain` `Internal Server Error`:
 
 ```json
 {
@@ -365,12 +363,32 @@ outbound HTTP client — still returns an RFC 9457
 }
 ```
 
-The handler logs the full exception (type, traceback, request path) via
-structlog, but **never leaks the internal exception message or stack to
+Two layers produce that response, and which one runs matters:
+
+| Layer | Handles | Why it exists |
+| :--- | :--- | :--- |
+| `UnhandledErrorMiddleware` (`app/core/middlewares.py`) | Anything raised by a route or by the layers inside it — nearly every uncaught exception | Registered innermost, so its 500 travels back out through CORS, `SecurityHeaders`, and `RequestID` and arrives with those headers attached |
+| `unhandled_exception_handler` (`app/core/exception_handlers.py`) | Exceptions raised *by a middleware itself*, and non-HTTP scopes | Registered against the base `Exception` type, as a final fallback |
+
+The middleware exists because a handler registered against bare
+`Exception` is not enough on its own: Starlette moves it to
+`ServerErrorMiddleware`, the outermost layer, so by the time it runs the
+exception has already unwound past every other middleware without any of
+them seeing a response go out. The 500 it builds therefore carries no
+`X-Request-ID`, no security headers, and no CORS headers. Catching the
+exception innermost instead — before it escapes the stack — is what lets
+those headers be applied the normal way.
+
+Both layers log the full exception (type, traceback, request path) via
+structlog, but **never leak the internal exception message or stack to
 the client** — the `detail` is always the generic `"Internal Server
-Error"`. Prefer raising an explicit `QuoinError` subclass over relying
-on this fallback; it exists as a safety net, not a substitute for
-deliberate error handling.
+Error"`. Exactly one of them logs per exception: the middleware stays
+silent when the response has already started streaming, because then the
+exception necessarily reaches the outer handler, which logs it there.
+
+Prefer raising an explicit `QuoinError` subclass over relying on this
+fallback; it exists as a safety net, not a substitute for deliberate
+error handling.
 
 ```python
 async def unhandled_exception_handler(

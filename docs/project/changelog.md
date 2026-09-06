@@ -19,13 +19,16 @@
 - **Validation errors**: a `field_validator` raising `ValueError` no
   longer crashes into a 500 — errors are sanitized with
   `jsonable_encoder`, and `errors[]` drops the Pydantic docs `url` and
-  truncates `input`.
+  truncates `input` (dropping it instead when it is an over-long object
+  or array, so the field's JSON type stays stable).
 - **Error handling**: an unhandled exception's 500 response now still
   carries `X-Request-ID`, security, and CORS headers, via a new
   innermost `UnhandledErrorMiddleware`.
 - **Configuration**: `QUOIN_LOG_LEVEL` now actually controls log
-  verbosity, and a bare `ENV` (no `QUOIN_` prefix) no longer selects a
-  different `.env` file or diverges from `Settings.ENV`.
+  verbosity. It accepts any casing (`debug` works as well as `DEBUG`)
+  but an unrecognised level now fails at startup rather than being
+  silently ignored. A bare `ENV` (no `QUOIN_` prefix) no longer selects
+  a different `.env` file or diverges from `Settings.ENV`.
 - **Users**: `get_by_email` now matches case-insensitively via
   `lower(email)` (with a migration backfilling legacy mixed-case rows),
   and the `q` search filter matches `%`/`_` literally instead of as SQL

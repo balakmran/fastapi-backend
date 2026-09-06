@@ -20,6 +20,11 @@ _PROBLEM_MEDIA_TYPE = "application/problem+json"
 # client-supplied data back into the response.
 _MAX_INPUT_CHARS = 200
 
+#: Sentinel returned by `_truncate_input` for a non-string value too
+#: large to reflect: the caller drops the `input` key entirely rather
+#: than substituting a value of a different JSON type.
+_OMIT_INPUT = object()
+
 # CPython's HTTPStatus.phrase wording tracks RFC updates (e.g. 422's
 # phrase changed from "Unprocessable Entity" to "Unprocessable Content"),
 # so deriving titles from it would make the response body depend on
@@ -107,18 +112,30 @@ async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
 def _truncate_input(value: Any) -> Any:
     """Cap the serialised length of a reflected validation `input` value.
 
+    Truncation never changes the JSON type of the reflected value. A
+    string is shortened to a string; a structure (object, array) that is
+    too large to reflect is dropped entirely rather than replaced by a
+    truncated stand-in, so a client parsing ``errors[].input`` never
+    finds an object silently turned into a string purely because it was
+    big. Dropping also avoids emitting a cut-off Python ``repr``, which
+    is not valid JSON syntax and so is useless to a client anyway.
+
     Args:
         value: A JSON-safe value (already passed through
             ``jsonable_encoder``).
 
     Returns:
-        ``value`` unchanged if its string form fits within
-        ``_MAX_INPUT_CHARS``, else a truncated string with an ellipsis.
+        ``value`` unchanged if it fits within ``_MAX_INPUT_CHARS``, a
+        truncated string if ``value`` is an over-long string, else
+        ``_OMIT_INPUT`` to signal the caller should drop the key.
     """
-    text = value if isinstance(value, str) else repr(value)
-    if len(text) <= _MAX_INPUT_CHARS:
+    if isinstance(value, str):
+        if len(value) <= _MAX_INPUT_CHARS:
+            return value
+        return value[:_MAX_INPUT_CHARS] + "…"
+    if len(repr(value)) <= _MAX_INPUT_CHARS:
         return value
-    return text[:_MAX_INPUT_CHARS] + "…"
+    return _OMIT_INPUT
 
 
 def _sanitize_validation_errors(
@@ -138,19 +155,25 @@ def _sanitize_validation_errors(
     API client) and truncates ``input`` (see ``_truncate_input``), so a
     validation error never echoes an unbounded amount of client-supplied
     data — or a stray secret pasted into the wrong field — back into the
-    response body.
+    response body. An over-long ``input`` that isn't a string is dropped
+    rather than truncated, keeping the field's JSON type stable.
 
     Args:
         errors: Raw error dicts from ``exc.errors()``.
 
     Returns:
-        JSON-safe error dicts with `url` removed and `input` truncated.
+        JSON-safe error dicts with `url` removed and `input` truncated,
+        dropped, or left as-is.
     """
     sanitized: list[dict[str, Any]] = []
     for error in jsonable_encoder(errors):
         error.pop("url", None)
         if "input" in error:
-            error["input"] = _truncate_input(error["input"])
+            truncated = _truncate_input(error["input"])
+            if truncated is _OMIT_INPUT:
+                del error["input"]
+            else:
+                error["input"] = truncated
         sanitized.append(error)
     return sanitized
 

@@ -833,12 +833,22 @@ async def test_unhandled_error_after_response_started_reraises() -> None:
         sent.append(message)
 
     middleware = UnhandledErrorMiddleware(streaming_app)
-    with pytest.raises(RuntimeError, match="boom after headers"):
-        await middleware({"type": "http", "path": "/stream"}, receive, capture)
+    with _capture_access_logs() as cap_logs:
+        with pytest.raises(RuntimeError, match="boom after headers"):
+            await middleware(
+                {"type": "http", "path": "/stream"}, receive, capture
+            )
 
     starts = [m for m in sent if m["type"] == "http.response.start"]
     assert len(starts) == 1
     assert starts[0]["status"] == status.HTTP_200_OK
+
+    # Silent on this path by design: the re-raised exception reaches
+    # Starlette's ServerErrorMiddleware, which calls the registered
+    # Exception handler unconditionally, and that handler logs
+    # unhandled_exception itself. Logging here too would emit the event
+    # twice for a single exception.
+    assert not [e for e in cap_logs if e["event"] == "unhandled_exception"]
 
 
 @pytest.mark.asyncio
