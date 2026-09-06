@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel import SQLModel
@@ -16,6 +16,36 @@ from app.db.session import create_db_engine, create_session_factory, get_session
 from app.main import app as fastapi_app
 
 _ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
+
+_PROBLEM_MEDIA_TYPE = "application/problem+json"
+
+
+async def _assert_problem_details_contract(response: Response) -> None:
+    """Enforce the problem-details contract on every response the suite sees.
+
+    An httpx event hook on the ``client`` fixture, so it runs against
+    every response any test makes through it — not only tests that
+    assert on it directly. Every client/server error (4xx/5xx) must be
+    ``application/problem+json`` and carry ``X-Request-ID``; this single
+    hook would have caught B3 (the 500 path escaping the middleware
+    stack) the day it was introduced, and did in fact catch the
+    Starlette-default-404 gap alongside it (Improvement 7).
+
+    3xx isn't checked: a redirect has no problem-details body to hold to
+    this contract, and QuoinAPI's routes don't issue any today.
+    """
+    if response.status_code < 400:  # noqa: PLR2004
+        return
+    assert response.headers.get("content-type") == _PROBLEM_MEDIA_TYPE, (
+        f"{response.request.method} {response.request.url} returned "
+        f"{response.status_code} with content-type "
+        f"{response.headers.get('content-type')!r}, not "
+        f"{_PROBLEM_MEDIA_TYPE!r}"
+    )
+    assert "x-request-id" in response.headers, (
+        f"{response.request.method} {response.request.url} returned "
+        f"{response.status_code} with no X-Request-ID header"
+    )
 
 
 def _test_database_url() -> str:
@@ -137,7 +167,9 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     fastapi_app.dependency_overrides[get_session] = lambda: db_session
 
     async with AsyncClient(
-        transport=ASGITransport(app=fastapi_app), base_url="http://test"
+        transport=ASGITransport(app=fastapi_app),
+        base_url="http://test",
+        event_hooks={"response": [_assert_problem_details_contract]},
     ) as c:
         yield c
 

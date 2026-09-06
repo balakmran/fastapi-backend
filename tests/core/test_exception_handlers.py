@@ -127,3 +127,44 @@ def test_sanitize_validation_errors_tolerates_missing_input() -> None:
     sanitized = _sanitize_validation_errors(errors)
 
     assert sanitized == [{"loc": ["body", "name"], "msg": "field required"}]
+
+
+@pytest.mark.asyncio
+async def test_starlette_http_exception_is_problem_json() -> None:
+    """Starlette's own HTTPException (404, 405, ...) is problem+json too.
+
+    Regression test: Starlette's default handler for its own
+    ``HTTPException`` — raised internally when no route matches, or a
+    route matches the wrong method — used to win over
+    ``http_exception_handler`` and ship a bare ``{"detail": ...}`` body,
+    the one gap the problem-details contract otherwise upholds
+    everywhere else (the same class of gap as B3).
+
+    Both cases share one ``create_app()`` / one client: two separate
+    apps each logging through ``exception_handlers.logger`` — each app
+    creation re-runs ``setup_logging()`` — has been observed to leave a
+    *later*, unrelated test's ``capture_logs()`` unable to intercept
+    that module's logger, so this suite keeps one app per handler under
+    test rather than one App per scenario.
+    """
+    app = create_app()
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        not_found = await ac.get("/api/v1/does-not-exist")
+        # Starlette attaches an `Allow` header to a 405; it must survive
+        # being rewrapped into a ProblemDetail response.
+        wrong_method = await ac.patch("/api/v1/users/")
+
+    assert not_found.status_code == status.HTTP_404_NOT_FOUND
+    assert not_found.headers["content-type"] == "application/problem+json"
+    not_found_body = not_found.json()
+    assert not_found_body["type"] == "urn:quoin:error:not_found"
+    assert not_found_body["title"] == "Not Found"
+    assert not_found_body["status"] == status.HTTP_404_NOT_FOUND
+
+    assert wrong_method.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+    assert wrong_method.headers["content-type"] == "application/problem+json"
+    assert "Allow" in wrong_method.headers
+    assert wrong_method.json()["type"] == "urn:quoin:error:method_not_allowed"
