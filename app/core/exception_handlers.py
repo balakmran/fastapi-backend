@@ -1,3 +1,4 @@
+import json
 import re
 from http import HTTPStatus
 from typing import Any
@@ -7,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
+from fastapi.utils import is_body_allowed_for_status_code
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.exceptions import QuoinError, QuoinRequestValidationError
@@ -50,6 +52,25 @@ def _problem_title(status_code: int) -> str:
     return _PROBLEM_TITLES.get(status, status.phrase)
 
 
+def _detail_text(detail: Any) -> str:
+    """Render an ``HTTPException.detail`` as an RFC 9457 ``detail`` string.
+
+    RFC 9457 types ``detail`` as a string, but FastAPI allows any
+    JSON-serializable value there (``detail={"code": ...}`` is a common
+    idiom) and its own handler passes that through as real JSON. A bare
+    ``str()`` would emit a Python ``repr`` — single-quoted and not
+    parseable by a client — so a non-string detail is JSON-encoded
+    instead, and anything that still cannot be encoded falls back to
+    ``str()``.
+    """
+    if isinstance(detail, str):
+        return detail
+    try:
+        return json.dumps(jsonable_encoder(detail))
+    except (TypeError, ValueError):  # pragma: no cover - defensive
+        return str(detail)
+
+
 def _problem_type_from_status(status_code: int) -> str:
     """Derive a URN problem type from a status code's reason phrase.
 
@@ -69,7 +90,18 @@ def _problem_response(
     status_code: int,
     headers: dict[str, str] | None = None,
 ) -> Response:
-    """Serialize a ProblemDetail into an application/problem+json response."""
+    """Serialize a ProblemDetail into an application/problem+json response.
+
+    Statuses that forbid a body (1xx, 204, 205, 304) get a bodyless
+    response instead: sending one anyway is a protocol violation that
+    ASGI servers reject outright — uvicorn raises "Response content
+    longer than Content-Length" mid-send, after the headers are already
+    on the wire, leaving the client with a truncated response. Starlette
+    and FastAPI both special-case these statuses in their own handlers
+    for the same reason.
+    """
+    if not is_body_allowed_for_status_code(status_code):
+        return Response(status_code=status_code, headers=headers)
     return Response(
         content=problem.model_dump_json(exclude_none=True),
         status_code=status_code,
@@ -124,7 +156,7 @@ async def http_exception_handler(request: Request, exc: Any) -> Response:
         type=_problem_type_from_status(http_exc.status_code),
         title=_problem_title(http_exc.status_code),
         status=http_exc.status_code,
-        detail=str(http_exc.detail),
+        detail=_detail_text(http_exc.detail),
         instance=request.url.path,
     )
     headers = dict(http_exc.headers) if http_exc.headers else None

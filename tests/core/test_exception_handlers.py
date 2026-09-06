@@ -1,6 +1,8 @@
+import json
+
 import pydantic
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from httpx import ASGITransport, AsyncClient
 from pydantic import field_validator
 
@@ -131,7 +133,7 @@ def test_sanitize_validation_errors_tolerates_missing_input() -> None:
 
 @pytest.mark.asyncio
 async def test_starlette_http_exception_is_problem_json() -> None:
-    """Starlette's own HTTPException (404, 405, ...) is problem+json too.
+    """Starlette's own HTTPException is problem+json, in the right shape.
 
     Regression test: Starlette's default handler for its own
     ``HTTPException`` — raised internally when no route matches, or a
@@ -140,14 +142,36 @@ async def test_starlette_http_exception_is_problem_json() -> None:
     the one gap the problem-details contract otherwise upholds
     everywhere else (the same class of gap as B3).
 
-    Both cases share one ``create_app()`` / one client: two separate
+    Two more shapes the handler must preserve from Starlette's and
+    FastAPI's defaults are checked here too:
+
+    - a **bodyless status** (304, 204) must stay bodyless. A body there
+      is a protocol violation uvicorn rejects mid-send with "Response
+      content longer than Content-Length", after the headers are
+      already on the wire.
+    - a **structured ``detail``** (``detail={...}``, valid FastAPI
+      usage) must stay parseable JSON; a bare ``str()`` would emit a
+      single-quoted Python repr no client can read.
+
+    Every case shares one ``create_app()`` / one client: two separate
     apps each logging through ``exception_handlers.logger`` — each app
     creation re-runs ``setup_logging()`` — has been observed to leave a
     *later*, unrelated test's ``capture_logs()`` unable to intercept
     that module's logger, so this suite keeps one app per handler under
-    test rather than one App per scenario.
+    test rather than one app per scenario.
     """
     app = create_app()
+
+    @app.get("/test-not-modified")
+    async def _not_modified() -> None:
+        raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED)
+
+    @app.get("/test-structured-detail")
+    async def _structured_detail() -> None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "bad_thing", "field": "email"},
+        )
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -156,6 +180,8 @@ async def test_starlette_http_exception_is_problem_json() -> None:
         # Starlette attaches an `Allow` header to a 405; it must survive
         # being rewrapped into a ProblemDetail response.
         wrong_method = await ac.patch("/api/v1/users/")
+        not_modified = await ac.get("/test-not-modified")
+        structured = await ac.get("/test-structured-detail")
 
     assert not_found.status_code == status.HTTP_404_NOT_FOUND
     assert not_found.headers["content-type"] == "application/problem+json"
@@ -168,3 +194,15 @@ async def test_starlette_http_exception_is_problem_json() -> None:
     assert wrong_method.headers["content-type"] == "application/problem+json"
     assert "Allow" in wrong_method.headers
     assert wrong_method.json()["type"] == "urn:quoin:error:method_not_allowed"
+
+    assert not_modified.status_code == status.HTTP_304_NOT_MODIFIED
+    assert not_modified.content == b""
+    assert "content-type" not in not_modified.headers
+
+    assert structured.status_code == status.HTTP_400_BAD_REQUEST
+    assert structured.headers["content-type"] == "application/problem+json"
+    # Valid JSON, not "{'code': 'bad_thing', ...}".
+    assert json.loads(structured.json()["detail"]) == {
+        "code": "bad_thing",
+        "field": "email",
+    }

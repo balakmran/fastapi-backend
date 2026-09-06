@@ -375,7 +375,7 @@ def test_jwks_cache_init_records_min_refresh() -> None:
     assert cache._last_attempt == float("-inf")
 
 
-def test_get_jwks_cache_no_uri_raises(
+async def test_get_jwks_cache_no_uri_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """get_jwks_cache raises UnauthorizedError when no JWKS URI is set."""
@@ -387,10 +387,10 @@ def test_get_jwks_cache_no_uri_raises(
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
 
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_JWKS_URI"):
-        get_jwks_cache(request)  # type: ignore
+        await get_jwks_cache(request)  # type: ignore
 
 
-def test_get_jwks_cache_creates_and_stores_instance(
+async def test_get_jwks_cache_creates_and_stores_instance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """get_jwks_cache creates a JWKSCache and stores it on app.state."""
@@ -405,14 +405,14 @@ def test_get_jwks_cache_creates_and_stores_instance(
     state = SimpleNamespace()
     request = SimpleNamespace(app=SimpleNamespace(state=state))
 
-    cache = get_jwks_cache(request)  # type: ignore
+    cache = await get_jwks_cache(request)  # type: ignore
 
     assert isinstance(cache, JWKSCache)
     assert cache._uri == "http://example.com/jwks"
     # Stored on app.state so the next call reuses the same instance
     # rather than dropping and refetching the keys (S2/Improvement 6).
     assert state.jwks_cache is cache
-    assert get_jwks_cache(request) is cache  # type: ignore
+    assert await get_jwks_cache(request) is cache  # type: ignore
 
 
 def test_extract_roles_array(monkeypatch: pytest.MonkeyPatch) -> None:
