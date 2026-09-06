@@ -3,13 +3,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import structlog
+from fastapi import FastAPI, status
+from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
 from structlog.testing import capture_logs
 
 from app.core.config import Environment
 from app.core.exception_handlers import validation_exception_handler
+from app.core.exceptions import QuoinError
 from app.core.logging import _add_otel_context, setup_logging
+from app.main import create_app
 
 
 def test_setup_logging() -> None:
@@ -106,6 +110,57 @@ def test_log_level_filters_below_threshold() -> None:
     events = [entry["event"] for entry in cap_logs]
     assert "emitted" in events
     assert "suppressed" not in events
+
+
+async def _log_quoin_error_through(app: FastAPI) -> None:
+    """Hit a route that logs once via exception_handlers' module logger."""
+
+    @app.get("/test-logging-generations")
+    async def _raise() -> None:
+        raise QuoinError(
+            message="boom", status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        await ac.get("/test-logging-generations")
+
+
+@pytest.mark.asyncio
+async def test_capture_logs_survives_repeated_create_app_calls() -> None:
+    """Regression: capture_logs() must see logs across setup_logging() runs.
+
+    ``create_app()`` calls ``setup_logging()`` on every invocation, not
+    just once at process start. With ``cache_logger_on_first_use=True``,
+    a module-level logger (e.g. ``app.core.exception_handlers.logger``)
+    caches a bound logger the first time it actually logs, capturing a
+    reference to whichever processors list was live at that moment. If
+    ``setup_logging()`` swapped in a brand-new list object on a later
+    call (a later "generation"), that cached logger would keep pointing
+    at the old, abandoned list -- and ``capture_logs()``, which only
+    ever mutates the *current* list in place, would silently stop
+    seeing that logger's output. See ``structlog.testing.capture_logs``'s
+    docstring: "keep the list instance intact to not break references
+    held by bound loggers."
+    """
+    # First generation: create_app() re-runs setup_logging(), and the
+    # shared exception_handlers logger logs (and may get cached here).
+    await _log_quoin_error_through(create_app())
+
+    # Second generation: another setup_logging() call. Without the fix
+    # this rebinds structlog's processors to a brand-new list, orphaning
+    # any logger already cached against the previous one.
+    app = create_app()
+    await _log_quoin_error_through(app)
+
+    # capture_logs() mutates whatever list is *currently* configured;
+    # the module logger must still be wired to it.
+    with capture_logs() as cap_logs:
+        await _log_quoin_error_through(app)
+
+    events = [log for log in cap_logs if log["event"] == "quoin_error"]
+    assert len(events) == 1
+    assert events[0]["log_level"] == "warning"
 
 
 def test_add_otel_context_injects_fields_when_span_valid() -> None:
