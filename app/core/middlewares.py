@@ -323,11 +323,12 @@ class RequestSizeLimitMiddleware:
 class AccessLogMiddleware:
     """Emit one structured INFO line per HTTP request.
 
-    Pure ASGI. Logs method, path, status, and wall-clock duration once
-    the response has started, so production debugging does not rely
-    solely on traces. The ``/health`` and ``/ready`` probe paths are
-    excluded to keep orchestrator polling out of the log stream, and
-    the whole layer is gated by ``QUOIN_ACCESS_LOG_ENABLED``.
+    Pure ASGI. Logs method, path, route template, status, and
+    wall-clock duration once the response has started, so production
+    debugging does not rely solely on traces. The ``/health`` and
+    ``/ready`` probe paths are excluded to keep orchestrator polling
+    out of the log stream, and the whole layer is gated by
+    ``QUOIN_ACCESS_LOG_ENABLED``.
 
     Placed inside ``RequestIDMiddleware`` (see ``configure_middlewares``)
     so the bound ``request_id`` rides along on every line.
@@ -364,10 +365,17 @@ class AccessLogMiddleware:
             # ``finally`` so a request that raises before responding
             # still records a line (status stays 500) before the
             # exception propagates to the handler chain.
+            #
+            # ``scope["route"]`` is set by FastAPI's routing once a route
+            # matches (before the endpoint runs), so it is populated by
+            # the time this middleware — which wraps the whole downstream
+            # call — resumes. It is absent for a 404, hence the default.
+            route = scope.get("route")
             logger.info(
                 "http_request",
                 method=scope.get("method", ""),
                 path=scope.get("path", ""),
+                route=getattr(route, "path", None),
                 status=status,
                 duration_ms=round((time.perf_counter() - started) * 1000, 2),
             )

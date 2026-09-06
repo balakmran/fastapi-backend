@@ -987,6 +987,10 @@ def access_log_app() -> FastAPI:
     async def health_endpoint() -> dict[str, str]:
         return {"status": "healthy"}
 
+    @app.get("/items/{item_id}")
+    async def item_endpoint(item_id: str) -> dict[str, str]:
+        return {"item_id": item_id}
+
     return app
 
 
@@ -1029,10 +1033,52 @@ async def test_access_log_emits_one_line(access_log_app: FastAPI) -> None:
     line = events[0]
     assert line["method"] == "GET"
     assert line["path"] == "/ok"
+    assert line["route"] == "/ok"
     assert line["status"] == status.HTTP_200_OK
     assert line["log_level"] == "info"
     assert isinstance(line["duration_ms"], float)
     assert line["duration_ms"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_access_log_route_is_the_template_not_the_path(
+    access_log_app: FastAPI,
+) -> None:
+    """`route` carries the path template so dashboards can aggregate.
+
+    `path` carries the literal request path (high-cardinality); `route`
+    is the matched template (Improvement 4).
+    """
+    with _capture_access_logs() as cap_logs:
+        async with AsyncClient(
+            transport=ASGITransport(app=access_log_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/items/42")
+
+    assert response.status_code == status.HTTP_200_OK
+    events = [log for log in cap_logs if log["event"] == "http_request"]
+    assert len(events) == 1
+    assert events[0]["path"] == "/items/42"
+    assert events[0]["route"] == "/items/{item_id}"
+
+
+@pytest.mark.asyncio
+async def test_access_log_route_absent_on_unmatched_path(
+    access_log_app: FastAPI,
+) -> None:
+    """A 404 (no route matched) logs `route: None`, not a stale value."""
+    with _capture_access_logs() as cap_logs:
+        async with AsyncClient(
+            transport=ASGITransport(app=access_log_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/does-not-exist")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    events = [log for log in cap_logs if log["event"] == "http_request"]
+    assert len(events) == 1
+    assert events[0]["route"] is None
 
 
 @pytest.mark.asyncio
@@ -1096,4 +1142,5 @@ async def test_access_log_records_failed_request() -> None:
     events = [log for log in cap_logs if log["event"] == "http_request"]
     assert len(events) == 1
     assert events[0]["path"] == "/boom"
+    assert events[0]["route"] is None
     assert events[0]["status"] == status.HTTP_500_INTERNAL_SERVER_ERROR

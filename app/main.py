@@ -13,7 +13,7 @@ from app.core.lifecycle import Lifecycle
 from app.core.logging import setup_logging
 from app.core.middlewares import configure_middlewares
 from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
-from app.core.telemetry import setup_opentelemetry
+from app.core.telemetry import instrument_sqlalchemy_engine, setup_opentelemetry
 from app.db.session import create_db_engine, create_session_factory
 from app.http.client import create_http_client
 
@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
         engine = create_db_engine()
         app.state.engine = engine
         app.state.session_factory = create_session_factory(engine)
+        instrument_sqlalchemy_engine(engine)
         http_client = create_http_client()
         http_client.instrument()
         app.state.http_client = http_client
