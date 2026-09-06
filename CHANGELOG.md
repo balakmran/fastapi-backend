@@ -12,6 +12,44 @@
 
 ### Fixed
 
+- **Database**: `get_session` now commits (or rolls back) *before* the
+  response is sent, not after. FastAPI's default yield-dependency scope
+  closes the generator once the response has already gone out over the
+  wire, so a client could previously receive a 2xx for a write whose
+  `COMMIT` had not happened yet — or ever would, if it failed. Depend on
+  the new `SessionDep` (`app/db/session.py`) rather than
+  `Depends(get_session)` directly; it pins the required
+  `scope="function"`. **Manual reconciliation**: if you copied the
+  `Depends(get_session)` pattern into your own modules, switch them to
+  `SessionDep` too.
+- **Validation errors**: a `field_validator` raising `ValueError` or
+  `AssertionError` — Pydantic's own documented idiom — previously
+  crashed the 422 handler's JSON serialisation (the raised exception
+  lives under `ctx.error`, which isn't JSON-safe) and surfaced as an
+  internal 500 instead. Validation errors are now passed through
+  `jsonable_encoder` first. The `errors[]` array also drops `url` (a
+  link into Pydantic's docs) and truncates `input` to 200 characters,
+  so a validation error never echoes an unbounded amount of
+  client-supplied data back into the response.
+- **Error handling**: an unhandled exception (a bare `KeyError`, a bug)
+  now still gets `X-Request-ID`, security headers, and CORS headers on
+  its 500 response. Starlette moves any handler registered for the
+  bare `Exception` type into `ServerErrorMiddleware`, *above* every
+  middleware this project configures, so those headers were previously
+  never applied — the same class of gap already closed for 504/413/400.
+  A new `UnhandledErrorMiddleware`, innermost of all, catches the
+  exception before it escapes this project's middleware stack.
+- **Configuration**: `QUOIN_LOG_LEVEL` now actually controls log
+  verbosity. Nothing previously read it — `structlog.stdlib.BoundLogger`
+  has no level filter of its own — so `DEBUG`/`INFO`/`WARNING`/`ERROR`
+  were indistinguishable. `LOG_LEVEL` is also now typed as a `Literal`
+  of those four values, so a typo fails fast at startup.
+- **Configuration**: a bare `ENV` (no `QUOIN_` prefix) no longer selects
+  a different `.env` file. Previously `ENV=production` picked
+  `.env.production` while `Settings.ENV` — read only from `QUOIN_ENV` —
+  stayed at its `development` default, silently skipping the production
+  fail-fast checks and the `/docs`/`/openapi.json` disable guard while
+  the process loaded production credentials.
 - **OpenAPI**: error responses are now documented as
   `application/problem+json` instead of `application/json`, matching
   what the exception handlers actually send.

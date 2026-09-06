@@ -1,5 +1,6 @@
 import os
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import PostgresDsn, SecretStr
 from pydantic_core import MultiHostUrl
@@ -14,10 +15,17 @@ class Environment(StrEnum):
     production = "production"
 
 
-# Resolve environment before Settings loads
-env = Environment(
-    os.getenv("QUOIN_ENV", os.getenv("ENV", Environment.development))
-)
+#: Supported `QUOIN_LOG_LEVEL` values, matching the four levels the
+#: configuration guide documents.
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+
+# Resolve environment before Settings loads. Only the QUOIN_-prefixed
+# variable is honoured — a bare ENV is deliberately NOT read here, so it
+# can't select a differently-named env file (e.g. .env.production) while
+# leaving Settings.ENV itself at its "development" default below, which
+# would silently skip the production fail-fast checks and docs-disable
+# guard that key off Settings.ENV.
+env = Environment(os.getenv("QUOIN_ENV", Environment.development))
 
 # Select env file based on environment
 match env:
@@ -43,7 +51,7 @@ class Settings(BaseSettings):
 
     # Application
     ENV: Environment = Environment.development
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: LogLevel = "INFO"
     ACCESS_LOG_ENABLED: bool = True
     OTEL_ENABLED: bool = True
     REQUEST_ID_HEADER: str = "X-Request-ID"
