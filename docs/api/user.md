@@ -77,6 +77,7 @@ class UserBase(BaseModel):
 ```python
 class UserCreate(UserBase):
     """Schema for creating a user."""
+
     pass
 ```
 
@@ -153,15 +154,11 @@ class UserRepository:
         """Get user by email."""
         ...
 
-    async def list(
-        self, skip: int = 0, limit: int = 100
-    ) -> list[User]:
+    async def list(self, skip: int = 0, limit: int = 100) -> list[User]:
         """List users with pagination."""
         ...
 
-    async def update(
-        self, user: User, user_update: UserUpdate
-    ) -> User:
+    async def update(self, user: User, user_update: UserUpdate) -> User:
         """Update a user."""
         ...
 
@@ -210,8 +207,12 @@ class UserService:
         return user
 
     async def list_users(
-        self, params: PageParams, *, sort: str | None = None,
-        is_active: bool | None = None, q: str | None = None,
+        self,
+        params: PageParams,
+        *,
+        sort: str | None = None,
+        is_active: bool | None = None,
+        q: str | None = None,
     ) -> tuple[list[User], int]:
         """List a page of users and the total count."""
         return await self.repository.list(

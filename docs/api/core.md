@@ -16,9 +16,12 @@ from pydantic_settings import BaseSettings
 from pydantic import computed_field
 from pydantic_core import MultiHostUrl
 
+
 class Settings(BaseSettings):
     # Environment
-    ENV: Environment = Environment.development  # development | test | production
+    ENV: Environment = (
+        Environment.development
+    )  # development | test | production
     LOG_LEVEL: str = "INFO"
 
     # Database
@@ -94,7 +97,7 @@ def setup_logging() -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer()  # dev
+            structlog.dev.ConsoleRenderer(),  # dev
         ],
     )
 ```
@@ -114,6 +117,7 @@ Base class for all application exceptions.
 
 ```python
 from app.core.exceptions import QuoinError
+
 
 class QuoinError(Exception):
     """Base class for application exceptions."""
@@ -254,9 +258,10 @@ every module's list endpoint.
 ```python
 from app.core.pagination import Page, PageParams, parse_sort
 
+
 class Page[T](BaseModel):
     items: list[T]
-    total: int   # rows matching the query, ignoring pagination
+    total: int  # rows matching the query, ignoring pagination
     limit: int
     offset: int
 ```
@@ -283,12 +288,12 @@ Endpoint deprecation signalling via the RFC 8594 `Deprecation`,
 from datetime import date
 from app.core.versioning import deprecated
 
+
 @router.get(
     "/legacy",
     dependencies=[Depends(deprecated(sunset=date(2027, 1, 1), link="..."))],
 )
-async def legacy() -> ...:
-    ...
+async def legacy() -> ...: ...
 ```
 
 Returns a dependency that stamps `Deprecation: true` (plus `Sunset` and

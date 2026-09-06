@@ -17,13 +17,13 @@ from typing import Annotated
 from fastapi import Depends
 from app.core.security import ServicePrincipal, require_roles
 
+
 @router.post("/")
 async def create_thing(
     payload: ThingCreate,
     service: Annotated[ThingService, Depends(get_thing_service)],
     caller: Annotated[ServicePrincipal, Depends(require_roles("things.write"))],
-) -> Thing:
-    ...
+) -> Thing: ...
 ```
 
 Three things to notice:

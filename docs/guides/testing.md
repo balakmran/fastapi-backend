@@ -200,11 +200,15 @@ Test the full request-response cycle:
 # tests/modules/user/test_routes.py
 import pytest
 
+
 async def test_create_user(admin_client: AsyncClient):
-    response = await admin_client.post("/api/v1/users/", json={
-        "email": "test@example.com",
-        "full_name": "Test User",
-    })
+    response = await admin_client.post(
+        "/api/v1/users/",
+        json={
+            "email": "test@example.com",
+            "full_name": "Test User",
+        },
+    )
 
     assert response.status_code == 201
     data = response.json()
@@ -212,18 +216,25 @@ async def test_create_user(admin_client: AsyncClient):
     assert "id" in data
     assert "created_at" in data
 
+
 async def test_create_user_duplicate_email(admin_client: AsyncClient):
     # First user succeeds
-    await admin_client.post("/api/v1/users/", json={
-        "email": "duplicate@example.com",
-        "full_name": "First User",
-    })
+    await admin_client.post(
+        "/api/v1/users/",
+        json={
+            "email": "duplicate@example.com",
+            "full_name": "First User",
+        },
+    )
 
     # Second user with same email fails
-    response = await admin_client.post("/api/v1/users/", json={
-        "email": "duplicate@example.com",
-        "full_name": "Second User",
-    })
+    response = await admin_client.post(
+        "/api/v1/users/",
+        json={
+            "email": "duplicate@example.com",
+            "full_name": "Second User",
+        },
+    )
 
     assert response.status_code == 409
     assert "already registered" in response.json()["detail"]
@@ -238,6 +249,7 @@ Test business logic in isolation:
 import pytest
 from app.core.exceptions import ConflictError, NotFoundError
 
+
 async def test_create_user_duplicate_email_raises(
     user_service: UserService,
     user_create: UserCreate,
@@ -251,6 +263,7 @@ async def test_create_user_duplicate_email_raises(
 
     assert exc_info.value.message == "Email already registered"
     assert exc_info.value.status_code == 409
+
 
 async def test_get_user_not_found_raises(user_service: UserService):
     with pytest.raises(NotFoundError):
@@ -273,6 +286,7 @@ async def test_create_user(
     assert user.email == user_create.email
     assert user.created_at is not None
 
+
 async def test_get_by_email(
     user_repository: UserRepository,
     user_create: UserCreate,
@@ -293,10 +307,12 @@ Test Pydantic validation:
 import pytest
 from pydantic import ValidationError
 
+
 def test_user_create_valid():
     user = UserCreate(email="test@example.com", full_name="Test User")
     assert user.email == "test@example.com"
     assert user.is_active is True  # default
+
 
 def test_user_create_invalid_email():
     with pytest.raises(ValidationError) as exc_info:
@@ -323,6 +339,7 @@ def user_create() -> UserCreate:
         full_name="Test User",
     )
 
+
 @pytest.fixture
 async def sample_user(
     user_repository: UserRepository,
@@ -342,6 +359,7 @@ def create_user_data(email: str | None = None) -> dict:
         "full_name": "Test User",
     }
 
+
 async def test_list_users(admin_client: AsyncClient):
     # Create multiple users
     for _ in range(5):
@@ -360,11 +378,11 @@ For external APIs, use `pytest-mock` or `unittest.mock`:
 ```python
 from unittest.mock import AsyncMock, patch
 
+
 async def test_send_email_notification(mocker):
     # Mock the email service
     mock_send = mocker.patch(
-        "app.services.email.send_email",
-        new=AsyncMock(return_value=True)
+        "app.services.email.send_email", new=AsyncMock(return_value=True)
     )
 
     await user_service.create_user_with_welcome_email(user_create)
@@ -390,6 +408,7 @@ async def test_with_custom_config(monkeypatch, app):
     # Re-import to pick up new settings
     from importlib import reload
     from app.core import config
+
     reload(config)
 
     assert config.settings.ENV == "test"

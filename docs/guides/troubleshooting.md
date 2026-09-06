@@ -141,6 +141,7 @@ RuntimeError: Event loop is closed
 ```python
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_user_creation(client: AsyncClient):
     response = await client.post("/api/v1/users/", ...)
@@ -314,12 +315,11 @@ error: Missing type parameters for generic type "list"
 
 ```python
 # Wrong
-def get_users() -> list:
-    ...
+def get_users() -> list: ...
+
 
 # Correct
-def get_users() -> list[User]:
-    ...
+def get_users() -> list[User]: ...
 ```
 
 ---
@@ -370,6 +370,7 @@ engine = create_async_engine(
 
 ```python
 from fastapi import HTTPException
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):

@@ -43,8 +43,7 @@ router = APIRouter(prefix="/widgets")
         )
     ],
 )
-async def legacy_search() -> ...:
-    ...
+async def legacy_search() -> ...: ...
 ```
 
 Both `sunset` and `link` are optional. With neither, the route still

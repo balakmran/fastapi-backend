@@ -27,9 +27,9 @@ injected into every protected route by `require_roles()`.
 
 ```python
 class ServicePrincipal(BaseModel):
-    subject: str              # JWT `sub` — stable, unique service identifier
-    roles: list[str]          # Normalized app roles from the token
-    claims: dict[str, Any]    # Full decoded JWT payload (for advanced use)
+    subject: str  # JWT `sub` — stable, unique service identifier
+    roles: list[str]  # Normalized app roles from the token
+    claims: dict[str, Any]  # Full decoded JWT payload (for advanced use)
 ```
 
 `subject` maps to the OAuth 2.0 `sub` claim, which is stable and
@@ -194,16 +194,18 @@ from app.core.security import ServicePrincipal, require_roles
 
 router = APIRouter()
 
+
 # Read — any caller with users.read OR api.superuser
 @router.get("/")
 async def list_users(
-    caller: Annotated[ServicePrincipal, Depends(require_roles("users.read"))]
+    caller: Annotated[ServicePrincipal, Depends(require_roles("users.read"))],
 ): ...
+
 
 # Write — any caller with users.write OR api.superuser
 @router.post("/")
 async def create_user(
-    caller: Annotated[ServicePrincipal, Depends(require_roles("users.write"))]
+    caller: Annotated[ServicePrincipal, Depends(require_roles("users.write"))],
 ): ...
 ```
 

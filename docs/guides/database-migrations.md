@@ -78,10 +78,11 @@ how to respond.
 ```python
 # alembic/versions/abc123def456_add_phone_field_to_users_table.py
 def upgrade() -> None:
-    op.add_column('users', sa.Column('phone', sa.String(length=20)))
+    op.add_column("users", sa.Column("phone", sa.String(length=20)))
+
 
 def downgrade() -> None:
-    op.drop_column('users', 'phone')
+    op.drop_column("users", "phone")
 ```
 
 Common issues to check:
@@ -192,7 +193,9 @@ For operations that require data transformation, use **two-step migrations**:
 
 ```python
 def upgrade() -> None:
-    op.add_column('users', sa.Column('email_verified', sa.Boolean(), nullable=True))
+    op.add_column(
+        "users", sa.Column("email_verified", sa.Boolean(), nullable=True)
+    )
 ```
 
 **Step 2**: Backfill data and add NOT NULL constraint
@@ -200,9 +203,11 @@ def upgrade() -> None:
 ```python
 def upgrade() -> None:
     # Backfill data
-    op.execute("UPDATE users SET email_verified = false WHERE email_verified IS NULL")
+    op.execute(
+        "UPDATE users SET email_verified = false WHERE email_verified IS NULL"
+    )
     # Add constraint
-    op.alter_column('users', 'email_verified', nullable=False)
+    op.alter_column("users", "email_verified", nullable=False)
 ```
 
 ### Complex Migrations
@@ -212,10 +217,11 @@ For complex changes, manually edit the generated migration:
 ```python
 def upgrade() -> None:
     # Create new table
-    op.create_table('user_profiles',
-        sa.Column('id', sa.UUID(), primary_key=True),
-        sa.Column('user_id', sa.UUID(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    op.create_table(
+        "user_profiles",
+        sa.Column("id", sa.UUID(), primary_key=True),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
 
     # Migrate data from old structure
@@ -323,7 +329,9 @@ Postgres, build it concurrently instead:
 ```python
 def upgrade() -> None:
     op.create_index(
-        "ix_users_created_at", "users", ["created_at"],
+        "ix_users_created_at",
+        "users",
+        ["created_at"],
         postgresql_concurrently=True,
     )
 ```

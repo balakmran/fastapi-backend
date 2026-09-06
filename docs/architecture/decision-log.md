@@ -103,7 +103,7 @@ Same model used for database table and API response.
 **Connection String:**
 
 ```python
-POSTGRES_DRIVER=postgresql+asyncpg
+POSTGRES_DRIVER = postgresql + asyncpg
 ```
 
 **Trade-offs:**
@@ -451,6 +451,7 @@ async def lifespan(app: FastAPI):
     app.state.engine = create_db_engine()
     yield
     await app.state.engine.dispose()
+
 
 app = FastAPI(lifespan=lifespan)
 ```

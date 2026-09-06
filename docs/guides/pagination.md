@@ -91,6 +91,7 @@ tuple; only the route knows about the envelope.
     ```python
     from app.core.pagination import Page, PageParams
 
+
     @router.get("/", response_model=Page[WidgetRead])
     async def list_widgets(
         service: Annotated[WidgetService, Depends(get_widget_service)],
@@ -108,6 +109,7 @@ tuple; only the route knows about the envelope.
 
     WIDGET_SORTABLE = {"created_at": Widget.created_at, "name": Widget.name}
 
+
     async def list(
         self, params: PageParams, *, sort: str | None = None
     ) -> tuple[list[Widget], int]:
@@ -122,8 +124,10 @@ tuple; only the route knows about the envelope.
         )
         rows = list((await self.session.exec(rows_stmt)).scalars().all())
         total = (
-            await self.session.exec(select(func.count()).select_from(Widget))
-        ).scalars().one()
+            (await self.session.exec(select(func.count()).select_from(Widget)))
+            .scalars()
+            .one()
+        )
         return rows, total
     ```
 

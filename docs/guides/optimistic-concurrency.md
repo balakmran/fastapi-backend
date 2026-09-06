@@ -198,9 +198,7 @@ async def get_widget(
     widget_id: uuid.UUID,
     response: Response,
     service: Annotated[WidgetService, Depends(get_widget_service)],
-    caller: Annotated[
-        ServicePrincipal, Depends(require_roles("widgets.read"))
-    ],
+    caller: Annotated[ServicePrincipal, Depends(require_roles("widgets.read"))],
 ) -> Widget:
     """Return a single widget and its current ETag."""
     widget = await service.get_widget(widget_id)

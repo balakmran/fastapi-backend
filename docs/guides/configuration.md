@@ -153,18 +153,21 @@ from enum import StrEnum
 from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings
 
+
 class Environment(StrEnum):
     """Application environment."""
+
     development = "development"
     test = "test"
     production = "production"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="quoin_",
         case_sensitive=False,
         env_file=env_file,  # Automatically selected
-        extra="ignore",     # Unknown QUOIN_* vars are dropped
+        extra="ignore",  # Unknown QUOIN_* vars are dropped
     )
 
     ENV: Environment = Environment.development
