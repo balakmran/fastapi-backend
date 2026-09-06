@@ -22,20 +22,9 @@ def _add_otel_context(
     return event_dict
 
 
-# The list instance handed to structlog.configure() below. setup_logging()
-# runs on every create_app() call, not just once at process start, so this
-# is kept as one persistent list mutated in place (clear + extend) rather
-# than rebound to a fresh list each time.
-#
-# structlog.testing.capture_logs() works by mutating *this exact list
-# object* in place (see its docstring: "keep the list instance intact to
-# not break references held by bound loggers"). A module-level logger
-# cached via cache_logger_on_first_use=True captures a reference to
-# whatever list object was live at its first real log call; if
-# setup_logging() replaced that list wholesale on a later call, the
-# cached logger would keep pointing at the old, abandoned list and
-# capture_logs() -- which only ever mutates the *current* list -- would
-# silently stop seeing that logger's output.
+# Mutated in place (never rebound) so cached loggers and
+# structlog.testing.capture_logs() -- both of which key off this list's
+# identity -- stay wired to it across repeated setup_logging() calls.
 _processors: list[Processor] = []
 
 
@@ -81,8 +70,6 @@ def setup_logging() -> None:
             ),  # No padding for compact logs
         ]
 
-    # Mutate the persistent list in place instead of handing configure()
-    # a new list -- see the comment on _processors above.
     _processors.clear()
     _processors.extend(processors)
 
