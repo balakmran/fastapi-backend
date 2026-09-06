@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.exceptions import QuoinError, QuoinRequestValidationError
 from app.core.schemas import ProblemDetail
@@ -49,6 +50,20 @@ def _problem_title(status_code: int) -> str:
     return _PROBLEM_TITLES.get(status, status.phrase)
 
 
+def _problem_type_from_status(status_code: int) -> str:
+    """Derive a URN problem type from a status code's reason phrase.
+
+    Used for :class:`~starlette.exceptions.HTTPException`, which (unlike
+    a :class:`~app.core.exceptions.QuoinError` subclass) has no
+    exception-class name worth encoding — every status raises the same
+    class, so ``_problem_type`` would collapse a 404 and a 405 into the
+    same generic ``urn:quoin:error:http_exception``.
+    """
+    phrase = _problem_title(status_code)
+    snake = re.sub(r"[^a-zA-Z0-9]+", "_", phrase).strip("_").lower()
+    return f"urn:quoin:error:{snake}"
+
+
 def _problem_response(
     problem: ProblemDetail,
     status_code: int,
@@ -80,6 +95,40 @@ async def quoin_exception_handler(request: Request, exc: Any) -> Response:
         instance=request.url.path,
     )
     return _problem_response(problem, quoin_exc.status_code, quoin_exc.headers)
+
+
+async def http_exception_handler(request: Request, exc: Any) -> Response:
+    """Handle Starlette's own ``HTTPException``.
+
+    FastAPI/Starlette raise this internally for cases no domain
+    exception ever covers — no route matched (404), a route matched but
+    not for this method (405) — and register a default handler for it
+    that returns a bare ``{"detail": ...}`` JSON body. Left unregistered
+    here, that default would be the one gap in the "every error response
+    is ``application/problem+json``" contract the rest of the app
+    upholds (the same class of gap B3 was for the 500 path).
+
+    Registering against the Starlette base class (rather than
+    ``fastapi.HTTPException``) also catches ``fastapi.HTTPException`` —
+    still occasionally the more convenient choice in third-party
+    dependencies — since it is a subclass.
+    """
+    http_exc: StarletteHTTPException = exc
+    logger.warning(
+        "http_exception",
+        status_code=http_exc.status_code,
+        detail=http_exc.detail,
+        path=request.url.path,
+    )
+    problem = ProblemDetail(
+        type=_problem_type_from_status(http_exc.status_code),
+        title=_problem_title(http_exc.status_code),
+        status=http_exc.status_code,
+        detail=str(http_exc.detail),
+        instance=request.url.path,
+    )
+    headers = dict(http_exc.headers) if http_exc.headers else None
+    return _problem_response(problem, http_exc.status_code, headers)
 
 
 async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
@@ -188,4 +237,5 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         RequestValidationError, validation_exception_handler
     )
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
