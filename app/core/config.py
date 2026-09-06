@@ -2,7 +2,7 @@ import os
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import PostgresDsn, SecretStr
+from pydantic import PostgresDsn, SecretStr, field_validator
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,7 +16,8 @@ class Environment(StrEnum):
 
 
 #: Supported `QUOIN_LOG_LEVEL` values, matching the four levels the
-#: configuration guide documents.
+#: configuration guide documents. Case-insensitive on input — see
+#: `Settings._normalize_log_level`.
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
 # Resolve environment before Settings loads. Only the QUOIN_-prefixed
@@ -57,6 +58,29 @@ class Settings(BaseSettings):
     REQUEST_ID_HEADER: str = "X-Request-ID"
     REQUEST_TIMEOUT_SECONDS: float = 30.0
     SHUTDOWN_DRAIN_TIMEOUT: float = 30.0
+
+    @field_validator("LOG_LEVEL", mode="before")
+    @classmethod
+    def _normalize_log_level(cls, value: object) -> object:
+        """Upper-case the log level so `debug` is accepted as `DEBUG`.
+
+        `LOG_LEVEL` is a `Literal`, and pydantic matches those exactly,
+        so without this a lower-case value — the common convention in
+        many deployment configs, and silently tolerated back when the
+        setting was a plain `str` — would fail validation. Because
+        `settings` is constructed at import time, that failure would
+        crash not just the API but anything importing this module,
+        Alembic included. Genuine typos still fail, which is the point
+        of the `Literal`.
+
+        Args:
+            value: The raw value from the environment or an `.env` file.
+
+        Returns:
+            The upper-cased value if it is a string, else unchanged so
+            pydantic reports the type error itself.
+        """
+        return value.upper() if isinstance(value, str) else value
 
     # Database
     POSTGRES_DRIVER: str = "postgresql+asyncpg"

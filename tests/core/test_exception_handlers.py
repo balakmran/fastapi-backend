@@ -96,6 +96,41 @@ async def test_validation_error_input_is_truncated() -> None:
     assert error["input"].endswith("…")
 
 
+@pytest.mark.asyncio
+async def test_oversize_non_string_input_is_dropped_not_retyped() -> None:
+    """An over-long structured `input` is dropped, never turned into a str.
+
+    Truncating a dict or list to a string would make the JSON type of
+    `errors[].input` depend on the value's size — an object for a small
+    payload, a string for a large one — and the truncated Python `repr`
+    isn't valid JSON for a client to parse anyway.
+    """
+    app = create_app()
+
+    @app.post("/test-structured-input")
+    async def _endpoint(body: _InternalModel) -> dict[str, int]:
+        return {"n": body.n}
+
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    small = {"a": 1}
+    large = {f"field_{i}": i for i in range(50)}
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        small_response = await ac.post(
+            "/test-structured-input", json={"n": small}
+        )
+        large_response = await ac.post(
+            "/test-structured-input", json={"n": large}
+        )
+
+    # Small enough to reflect: kept, and still a JSON object.
+    small_error = small_response.json()["errors"][0]
+    assert small_error["input"] == small
+
+    # Too large: the key is absent rather than holding a stringified dict.
+    large_error = large_response.json()["errors"][0]
+    assert "input" not in large_error
+
+
 def test_sanitize_validation_errors_tolerates_missing_input() -> None:
     """An error dict without an `input` key passes through untouched.
 

@@ -4,9 +4,9 @@ The application is configured using **environment variables** and **[Pydantic Se
 
 ## Environment-Based Configuration
 
-The application supports three environments with automatic `.env` file selection based on the `ENV` variable:
+The application supports three environments with automatic `.env` file selection based on the `QUOIN_ENV` variable:
 
-| Environment | ENV Value               | Config File       | Use Case              |
+| Environment | `QUOIN_ENV` Value       | Config File       | Use Case              |
 | :---------- | :---------------------- | :---------------- | :-------------------- |
 | Development | `development` (default) | `.env`            | Local development     |
 | Test        | `test`                  | `.env.test`       | Test suite, CI/CD     |
@@ -92,7 +92,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | Variable                     | Description                                         | Default                                              |
 | :--------------------------- | :-------------------------------------------------- | :--------------------------------------------------- |
 | `QUOIN_ENV`                  | Environment (`development`, `test`, `production`)   | `development`                                        |
-| `QUOIN_LOG_LEVEL`            | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO`                                               |
+| `QUOIN_LOG_LEVEL`            | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`; case-insensitive, an unrecognised value fails at startup) | `INFO`                            |
 | `QUOIN_ACCESS_LOG_ENABLED`   | One INFO line per request (method, path, status, duration); probes excluded | `true`                       |
 | `QUOIN_OTEL_ENABLED`         | Enable OpenTelemetry tracing                        | `true`                                               |
 | `QUOIN_POSTGRES_DRIVER`      | Database driver                                     | `postgresql+asyncpg`                                 |

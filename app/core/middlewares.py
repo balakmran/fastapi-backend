@@ -11,6 +11,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import Environment, settings
+from app.core.exception_handlers import _problem_title
 from app.core.schemas import ProblemDetail
 
 logger = structlog.get_logger(__name__)
@@ -28,6 +29,39 @@ def _safe_request_id(raw: str | None) -> str:
     if raw is not None and _REQUEST_ID_RE.match(raw):
         return raw
     return str(uuid.uuid4())
+
+
+class _ResponseStartedTracker:
+    """Wrap an ASGI ``send`` and record whether the response has started.
+
+    Both ``UnhandledErrorMiddleware`` and ``TimeoutMiddleware`` need the
+    same signal: once ``http.response.start`` has gone out, the headers
+    are on the wire and a manufactured error response can no longer
+    replace them. Keeping the wrapper here means that rule is defined
+    once rather than re-derived in each middleware that needs it.
+
+    A class rather than a closure so it captures only the ``send``
+    callable, not the whole enclosing request scope.
+    """
+
+    def __init__(self, send: Send) -> None:
+        """Wrap ``send``, starting in the not-yet-started state.
+
+        Args:
+            send: The downstream ASGI send callable to forward to.
+        """
+        self._send = send
+        self.started = False
+
+    async def send(self, message: Message) -> None:
+        """Forward one message, flagging the response as started.
+
+        Args:
+            message: The ASGI message to forward downstream.
+        """
+        if message["type"] == "http.response.start":
+            self.started = True
+        await self._send(message)
 
 
 class UnhandledErrorMiddleware:
@@ -71,36 +105,45 @@ class UnhandledErrorMiddleware:
             await self.app(scope, receive, send)
             return
 
-        response_started = False
-
-        async def send_wrapper(message: Message) -> None:
-            nonlocal response_started
-            if message["type"] == "http.response.start":
-                response_started = True
-            await send(message)
+        tracker = _ResponseStartedTracker(send)
 
         try:
-            await self.app(scope, receive, send_wrapper)
+            await self.app(scope, receive, tracker.send)
         except Exception as exc:
+            if tracker.started:
+                # Headers already on the wire — nothing left to do but
+                # let the outer ServerErrorMiddleware abort the
+                # connection, mirroring TimeoutMiddleware's own
+                # already-started handling below. Deliberately logged
+                # *after* this guard: ServerErrorMiddleware calls the
+                # registered Exception handler unconditionally (it only
+                # gates the send on whether the response started), and
+                # that handler logs `unhandled_exception` itself — so
+                # logging here too would emit the event twice for one
+                # exception and double every error count derived from
+                # it. The handler's line loses the bound `request_id`,
+                # which is the price of exactly-once logging on this
+                # rare already-streaming path.
+                raise
             logger.exception(
                 "unhandled_exception",
                 exc_type=type(exc).__name__,
                 path=scope.get("path", ""),
             )
-            if response_started:
-                # Headers already on the wire — nothing left to do but
-                # let the outer ServerErrorMiddleware abort the
-                # connection, mirroring TimeoutMiddleware's own
-                # already-started handling below.
-                raise
             problem = ProblemDetail(
                 type="urn:quoin:error:internal_server_error",
-                title="Internal Server Error",
+                # Via the shared helper, so the title cannot drift from
+                # the one unhandled_exception_handler builds.
+                title=_problem_title(500),
                 status=500,
                 detail="Internal Server Error",
                 instance=scope.get("path", ""),
             )
-            await _send_problem(send, problem, 500)
+            # close=True for the same reason the 413 path sets it: the
+            # request body may still be unread when the handler blew up,
+            # and a reused keep-alive connection would then start its
+            # next request mid-body.
+            await _send_problem(send, problem, 500, close=True)
 
 
 class TimeoutMiddleware:
@@ -127,24 +170,18 @@ class TimeoutMiddleware:
             await self.app(scope, receive, send)
             return
 
-        response_started = False
-
-        async def send_wrapper(message: Message) -> None:
-            nonlocal response_started
-            if message["type"] == "http.response.start":
-                response_started = True
-            await send(message)
+        tracker = _ResponseStartedTracker(send)
 
         try:
             with anyio.fail_after(timeout):
-                await self.app(scope, receive, send_wrapper)
+                await self.app(scope, receive, tracker.send)
         except TimeoutError:
             logger.warning(
                 "request_timeout",
                 path=scope.get("path", ""),
                 timeout=timeout,
             )
-            if response_started:
+            if tracker.started:
                 # Headers already sent — the fail_after scope has torn
                 # down the handler; nothing left to do but let the abort
                 # propagate.
