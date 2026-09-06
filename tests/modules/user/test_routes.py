@@ -397,6 +397,27 @@ async def test_repository_update_other_integrity_error_propagates() -> None:
         await repository.update(user, UserUpdate(full_name="New Name"))
 
 
+async def test_get_by_email_matches_legacy_mixed_case_row(
+    db_session: AsyncSession,
+) -> None:
+    """B8 regression: get_by_email matches a row with mixed-case email.
+
+    New rows are normalised to lowercase by ``UserBase``'s
+    ``field_validator``, but a row written before that validator
+    existed — or by any future path that bypasses it — could still
+    hold mixed case. Constructing the ``User`` model directly (instead
+    of through ``UserCreate``) simulates exactly that legacy row.
+    """
+    db_session.add(User(email="Mixed-Case@Example.com"))
+    await db_session.commit()
+
+    repository = UserRepository(db_session)
+    found = await repository.get_by_email("mixed-case@example.com")
+
+    assert found is not None
+    assert found.email == "Mixed-Case@Example.com"
+
+
 async def test_create_user_full_name_too_long_returns_422(
     admin_client: AsyncClient,
 ) -> None:
