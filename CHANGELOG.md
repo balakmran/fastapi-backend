@@ -21,6 +21,11 @@
   own codes. `just new <module>` now scaffolds routers with the default
   set, so new modules document their error bodies out of the box.
 
+### Changed
+
+- **Dependencies**: transitive lock refresh (`uv lock --upgrade`); no
+  direct pins changed. `just audit` reports no known vulnerabilities.
+
 ### Fixed
 
 - **Database**: `get_session` now commits (or rolls back) before the
