@@ -49,12 +49,12 @@ type safety, observability, and clean architecture out of the box.
 
 - **Framework:** FastAPI
 - **Database:** PostgreSQL (using `asyncpg` driver)
-- **ORM:** SQLModel (SQLAlchemy wrapper)
+- **ORM:** SQLModel
 - **Migrations:** Alembic
-- **Package Manager:** `uv` (Fast Python project & package manager)
-- **Task Runner:** `just`
+- **Package Manager:** uv
+- **Task Runner:** just
 - **Linting/Formatting:** Ruff
-- **Type Checking:** ty (Static type checker)
+- **Type Checking:** ty
 - **Testing:** Pytest, pytest-cov
 - **Observability:** OpenTelemetry, Structlog
 - **Documentation:** Zensical
