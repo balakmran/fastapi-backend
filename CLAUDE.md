@@ -23,7 +23,7 @@ Request flow: **route → `require_roles` → service → repository → SQLMode
 
 - `just dev` — DB + OAuth + migrations + dev server
 - `just db` — start Postgres only (`just test`/`just check` auto-start it)
-- `just check` — format → lint → typecheck → test
+- `just check` — format → lint → typecheck → migration check → test
 - `just migrate-gen "<msg>"` / `just migrate-up` / `just migrate-down`
 - `just new <module>` — scaffold a DDD module skeleton
 - `just token` — mint a signed JWT against the local mock OAuth
@@ -37,7 +37,7 @@ Single test: `uv run pytest tests/modules/user/test_routes.py::test_create_user 
 
 These apply on every change. Workflow-specific rules live in skills and `docs/guides/`.
 
-- **Run `just check` after every code change.** Format, lint, typecheck, and tests must all pass before you end a turn.
+- **Run `just check` after every code change.** Format, lint, typecheck, migration check, and tests must all pass before you end a turn.
 - **100% type hints.** Use blanket `# type: ignore` — never `# type: ignore[arg-type]` or other MyPy-style tags. The project uses `ty` (Pyright), which rejects unrecognized tag names.
 - **FastAPI exception handlers** registered via `app.add_exception_handler` must type the `exc` parameter as `Any` (Pyright requirement).
 - **80-char line limit** for Python and Markdown. Tables and code blocks are exempt.
