@@ -76,13 +76,14 @@ deciding whether to release `v1.0.0`.
 - [ ] Confirm `copier.yml` prompts, `scripts/copier_setup.py.jinja`, and
     generated metadata still produce a de-branded project.
 - [ ] Generate a clean project from the release candidate and run its full
-    gate. Commit or stash everything first: Copier generates from the
-    working tree, so a dirty checkout silently smoke-tests uncommitted
-    changes instead of the release candidate.
+    gate. Pass `--vcs-ref=HEAD`: a local git template without it resolves
+    to the latest *tag*, so the smoke test silently exercises the previous
+    release instead of the candidate. `HEAD` includes uncommitted changes,
+    so commit or stash first.
 
     ```bash
     git status --porcelain   # must be empty
-    uvx copier copy --trust . ../quoinapi-v1-smoke
+    uvx copier copy --trust --vcs-ref=HEAD . ../quoinapi-v1-smoke
     cd ../quoinapi-v1-smoke
     uv sync --all-groups
     just check
