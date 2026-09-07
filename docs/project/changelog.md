@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-07
+
 ### Added
 
 - **Security**: `QUOIN_OAUTH_SUPERUSER_ROLE` and
@@ -120,6 +122,19 @@
   `{"detail": ...}` body. A new httpx event hook on the test suite's
   `client` fixture checks this contract on every non-2xx response
   going forward.
+- **Error handling**: an `HTTPException` raised with a bodyless status
+  (`204`, `304`, `1xx`) no longer gets a problem+json body — a body
+  there is a protocol violation, and the client received a truncated
+  response. A non-string `detail` (`detail={"code": ...}`, valid
+  FastAPI usage) is now JSON-encoded rather than rendered as a
+  single-quoted Python `repr` no client can parse.
+- **Logging**: `setup_logging()` runs on every `create_app()`, and each
+  call handed structlog a freshly built processor list, discarding its
+  cached configuration. The list's identity is now stable across calls.
+- **Template**: `copier copy` no longer produces a project that fails
+  its own `just lint`. `APP_LONG_DESCRIPTION` is real source, so a
+  `long_description` answer over 80 characters — including the default,
+  at 123 — tripped E501 in the generated `app/core/metadata.py`.
 
 ## [0.10.0] - 2026-07-27
 
@@ -708,7 +723,8 @@
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/balakmran/quoin-api/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/balakmran/quoin-api/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/balakmran/quoin-api/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/balakmran/quoin-api/compare/v0.7.0...v0.8.0
