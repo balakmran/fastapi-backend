@@ -18,13 +18,21 @@ feedback and shifting priorities.
 | 💡 | Under Consideration |
 | ❌ | Deferred / Won't Do |
 
-The public API contract is locked — the pagination envelope, soft
-delete, and deprecation mechanism shipped in `0.9.0`, and the API
-stability and semver policy is now published (see the
-[CHANGELOG](changelog.md)). The one remaining milestone below carries
-QuoinAPI to template completeness; it is independently shippable, gated
-by the launch checklist, `just check`, and the existing pre-push hook. It
-may become `v1.0.0`.
+The public API contract is locked. The pagination envelope, soft delete,
+and the deprecation mechanism shipped in `0.9.0`; the API stability and
+semver policy followed in `0.10.0`. `0.11.0` closed the request-path
+correctness work — the transaction now commits *before* the response is
+sent, an unhandled 500 carries the same headers as every other error,
+`QUOIN_LOG_LEVEL` is wired to something, JWT claims are required rather
+than merely verified, and production boot validates hosts as well as
+OAuth.
+
+**`0.10.0` was the last feature release before `1.0`.** What remains is
+proof and rehearsal, not code: prove the template generates a project
+that passes its own gate, rehearse the release once for real, then ship.
+No backlog item is promoted into `0.12` — the backlog's bar ("a concrete
+user is blocked") has not been met by anyone yet, and meeting it after
+`1.0` costs nothing.
 
 The backlog below is deliberately narrow: it lists only demand-gated
 *features* — application code we would ship behind a feature flag or as
@@ -47,18 +55,55 @@ shipping.
 
 ---
 
-## v0.10.0 — Template Completeness
+## v0.12.0 — Proof
 
-The milestone that makes QuoinAPI a self-contained, production-ready
-Copier template with a stability guarantee. JWT validation and RBAC remain
-built-in: an API gateway complements service-level authorization rather
-than replacing it. Whether this becomes `v1.0.0` will be decided once the
-launch gate below is complete.
+The last `0.x` release. It changes no application behaviour: every item
+is a CI job or a document, so `copier update` from `0.11.0` should be
+conflict-free end to end.
 
-| Status | Feature |
-| :----- | :------ |
-| ✅ | **API stability + semver policy** — Public guarantee on what changes are breaking and how deprecations land |
-| 📋 | **Launch checklist** — Every preceding phase verified complete (see [v1.0 Launch Checklist](#v10-launch-checklist)) |
+The theme is closing the gap between what the repository *promises* and
+what it *verifies*. Two promises are still checked by a human running a
+command from memory, and one is not written down at all.
+
+| Status | Item | Why now |
+| :----- | :--- | :------ |
+| 📋 | **PR-gated scaffold smoke test** — a CI job that runs `copier copy --trust --vcs-ref=HEAD` into a temp directory, then `uv sync --all-groups && just check` inside the generated project | The largest open promise in the repo. The launch checklist has asked for this since `v0.9.0` and it has only ever been run by hand — which is how `0.11.0` shipped a template whose generated `metadata.py` failed its own `just lint`. Reuses the Postgres service already in `ci.yml`; pin one Python version to keep CI time down. One defect is already waiting for it: `ruff format` rewrites ~3 files on a fresh generation, in both directions — `AppError` is shorter than `QuoinError` so lines join, `QUOINAPI_` is longer than `QUOIN_` so they split. It self-heals (`just check` formats before it lints) and CI stays green, so a fresh clone's first `just check` merely leaves a dirty tree rather than failing. The fix is a rename-aware reflow in the template; this job is what would keep it fixed |
+| 📋 | **Scheduled dependency audit** — a weekly workflow running `just audit` and `just audit-prod`, opening an issue on failure | `just audit` exists and nothing runs it. Today a CVE surfaces only when a human remembers before a release, which makes the launch checklist's CVE item a point-in-time snapshot rather than a standing guarantee |
+| 📋 | **`docs/guides/staying-current.md`** — how an adopter with their own modules takes a new template release: what `copier update` does, how to read a **manual reconciliation** note, and how to resolve a `.rej` | `0.11.0` is the first release to demand real reconciliation work (`SessionDep`, `fail_under = 100`, `validate_production_settings`, `QUOIN_ALLOWED_HOSTS`). The policy says *what* is breaking; nothing says *what to do about it* |
+| 📋 | **Run `just check` after `copier update` in the update workflow** | `scripts/verify_template_update.py` deliberately proves only that the update applies cleanly — no `.rej`, answers file updated. Once the smoke job exists, asserting the *updated* project also passes its gate is a few lines, and it closes the other half of the guarantee |
+
+### What is deliberately not in v0.12.0
+
+- **No application code.** If a change would alter a generated
+  project's behaviour, it waits for `1.1`. `0.11.0` spent the
+  breaking-change budget for the `0.x` line.
+- **No backlog promotions.** See the bar above — and note that under
+  semver a feature added *after* `1.0` is an ordinary minor bump, so
+  nothing in the backlog gets cheaper by racing the freeze. The only
+  changes that genuinely have to beat `1.0` are ones that would be
+  **breaking** to make later; no backlog item qualifies.
+
+### Notes from the release boundary
+
+`v0.11.0` was the first tag where both sides of the comparison carried
+`.copier-answers.yml`, so the `Copier Update Check` workflow had its
+first meaningful run — `v0.10.0 → v0.11.0` applied cleanly. The update
+*mechanism* is now proven across a real release. What is still unproven
+is that the project on the far side of that update passes `just check`,
+which is what the last two items above address.
+
+---
+
+## v1.0.0-rc.1 — Rehearsal
+
+Cut a pre-release tag rather than a `0.13`. It costs nothing and buys
+two things: the `v*` workflows run against a candidate that can still be
+withdrawn, and the launch checklist below is executed once for real
+before it counts.
+
+Scope: **fixes only** — anything that fails the checklist becomes
+`rc.2`. If the checklist passes clean, `1.0.0` is the same commit with a
+version bump.
 
 ---
 
@@ -79,7 +124,8 @@ deciding whether to release `v1.0.0`.
     gate. Pass `--vcs-ref=HEAD`: a local git template without it resolves
     to the latest *tag*, so the smoke test silently exercises the previous
     release instead of the candidate. `HEAD` includes uncommitted changes,
-    so commit or stash first.
+    so commit or stash first. Once the `v0.12.0` scaffold smoke job is in
+    place this is a confirmation that CI is green, not a first run.
 
     ```bash
     git status --porcelain   # must be empty
@@ -101,8 +147,11 @@ deciding whether to release `v1.0.0`.
 
     ```bash
     git tag v1.0.0
-    just verify-template-update v0.9.0 v1.0.0
+    just verify-template-update v0.12.0 v1.0.0
     ```
+
+- [ ] Confirm the generated project's `.copier-answers.yml` records the
+    candidate tag after updating from `v0.12.0`.
 
 ### Behaviour and quality
 
@@ -113,6 +162,13 @@ deciding whether to release `v1.0.0`.
     `/docs`, one authenticated request, and one denied request.
 - [ ] Verify production configuration fails closed when the OAuth issuer,
     audience, or HTTPS JWKS URI is absent or invalid.
+- [ ] Confirm a bare `ENV=production` (no `QUOIN_` prefix) fails fast
+    rather than half-applying the production profile.
+- [ ] Confirm `QUOIN_LOG_LEVEL=WARNING` visibly suppresses the access log
+    in a `just dev` session.
+- [ ] Confirm the problem-details contract hook and the commit-before-send
+    test are present and green — they are the regression guards for the
+    two high-severity bugs fixed in `0.11.0`.
 - [ ] Review the public OpenAPI document and RFC 9457 error examples for
     intentional endpoint, response, and security-scheme changes only.
 
@@ -142,6 +198,7 @@ deciding whether to release `v1.0.0`.
 
 - [ ] Triage every open issue and pull request as release-blocking,
     explicitly deferred, or post-`v1.0.0` work.
+- [ ] Confirm the **Known Correctness Issues** table below is empty.
 - [ ] Record the final scope and all intentional deferrals in the
     `CHANGELOG.md` release section.
 - [ ] Obtain maintainer approval that the template contract is stable enough
@@ -150,7 +207,7 @@ deciding whether to release `v1.0.0`.
     merge, tag, and publish the release.
 
 Once complete, move this checklist to the release notes and replace the
-`v0.10.0` milestone with the next demand-backed milestone.
+milestone above with the next demand-backed milestone.
 
 ---
 
@@ -188,6 +245,31 @@ not "it would be nice to have".
 | 💡 | **Organizations + memberships + scopes** | Richer authorization model beyond `require_roles`. |
 | 💡 | **API keys** | Hashed at rest, scoped, rotatable; for service-to-service callers. |
 | 💡 | **Read-replica routing** | Repository-layer routing of reads to replicas. Pool sizing itself is already tunable via `QUOIN_DB_POOL_*`. |
+
+Of these, the most plausible promotions in rough order of likelihood
+are: background worker, API keys, Redis cache, multi-tenancy. Nothing
+currently blocks a known user on any of them.
+
+---
+
+## After 1.0
+
+Intent, not commitments — this section exists so that work deferred
+*until* `1.0` isn't confused with work deferred *pending demand*.
+
+- **Boring is the brand.** Strict semver, quarterly minors, security
+  patches immediately, and every minor verifies `copier update` from
+  the previous two tags rather than only the last one.
+- **The update path is the differentiator.** The verify script, the
+  scaffold smoke job, and `staying-current.md` are the assets worth
+  investing in; a template nobody can upgrade is a snapshot.
+- **The agentic workflow is a product feature.** Twelve skills, two
+  subagents, and five hooks are more than any comparable template
+  ships. Package them as a Claude Code plugin once the template
+  surface is frozen, so they can version independently of the code.
+- **Never extract a `quoin-core` package.** The
+  [API stability guide](docs/guides/api-stability.md) states this as a
+  non-goal; a template you can read end to end is the point.
 
 ---
 
