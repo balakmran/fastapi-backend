@@ -1,5 +1,6 @@
 import os
 import re
+import textwrap
 from pathlib import Path
 
 # --- Variables injected by Copier ---
@@ -38,6 +39,20 @@ IGNORE_EXTENSIONS = {
 }
 
 
+def wrap_long_description(text: str, width: int = 78) -> str:
+    """Wrap a long description across backslash-continued source lines.
+
+    ``APP_LONG_DESCRIPTION`` is real source in the generated project, so
+    a single-line answer over the 80-char limit fails its own `just
+    lint`. The continuations leave the runtime string unchanged; long
+    words are never split, because the join re-inserts the space.
+    """
+    lines = textwrap.wrap(
+        text, width=width, break_long_words=False, break_on_hyphens=False
+    )
+    return " \\\n".join(lines or [text])
+
+
 def process_file(file_path: Path) -> None:
     """Process a single file and apply all substitutions."""
     try:
@@ -58,10 +73,13 @@ def process_file(file_path: Path) -> None:
             f'APP_DESCRIPTION = "{DESCRIPTION}"',
             content,
         )
-        # APP_LONG_DESCRIPTION is a triple-quoted block.
+        # APP_LONG_DESCRIPTION is a triple-quoted block. A function
+        # replacement keeps re.sub from reading the wrapped line's
+        # backslashes as group references.
+        block = wrap_long_description(LONG_DESCRIPTION)
         content = re.sub(
             r'APP_LONG_DESCRIPTION\s*=\s*"""[\s\S]*?"""',
-            f'APP_LONG_DESCRIPTION = """\n{LONG_DESCRIPTION}\n"""',
+            lambda _: f'APP_LONG_DESCRIPTION = """\n{block}\n"""',
             content,
         )
     elif name == "pyproject.toml":
