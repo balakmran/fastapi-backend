@@ -163,15 +163,26 @@ explicitly above.
 
 #### Middlewares (`middlewares.py`)
 
-Configures CORS, trusted hosts, request ID, and timeout middleware:
+Registers the whole stack. `add_middleware` is LIFO, so the first
+registered is innermost and the last is outermost:
 
 ```python
 def configure_middlewares(app: FastAPI) -> None:
+    app.add_middleware(UnhandledErrorMiddleware)  # innermost of all
+    app.add_middleware(InFlightRequestMiddleware)
+    app.add_middleware(RequestSizeLimitMiddleware)
+    app.add_middleware(TimeoutMiddleware)
     configure_cors(app)  # CORS from settings.BACKEND_CORS_ORIGINS
     configure_trusted_hosts(app)  # TrustedHostMiddleware
+    app.add_middleware(AccessLogMiddleware)
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(TimeoutMiddleware)  # outermost — added last
+    app.add_middleware(SecurityHeadersMiddleware)  # outermost
 ```
+
+SecurityHeaders and RequestID sit outermost so every manufactured error
+— 504, 413, 400, 500 — still carries security headers and an
+`X-Request-ID`. See the [security guide](../guides/security.md#middleware-ordering)
+for the full rationale.
 
 ---
 
@@ -180,14 +191,21 @@ def configure_middlewares(app: FastAPI) -> None:
 #### Engine Creation (`session.py`)
 
 ```python
-def create_db_engine() -> AsyncEngine:
+def create_db_engine(url: str | None = None) -> AsyncEngine:
     return create_async_engine(
-        str(settings.DATABASE_URL),
-        pool_pre_ping=True,
-        pool_size=20,
-        max_overflow=10,
+        url or str(settings.DATABASE_URL),
+        echo=False,
+        future=True,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+        pool_recycle=settings.DB_POOL_RECYCLE,
+        pool_pre_ping=settings.DB_POOL_PRE_PING,
     )
 ```
+
+Every pool knob is a `QUOIN_DB_POOL_*` setting — see the
+[configuration guide](../guides/configuration.md#key-settings).
 
 Stored on `app.state.engine` during application lifespan.
 
@@ -329,7 +347,9 @@ app.mount(
 Serves:
 
 - `app/static/css/` — Stylesheets
-- `app/static/images/` — Images and icons
+- `app/static/img/` — Images and icons
+- `app/static/js/` — The home page's script, kept out of the HTML so the
+  default CSP needs no `'unsafe-inline'` in `script-src`
 - `app/templates/` — Jinja2 templates (root page)
 
 ---

@@ -6,8 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.139.2-teal.svg)](https://fastapi.tiangolo.com/)
-[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.39-blue.svg)](https://sqlmodel.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-teal.svg)](https://fastapi.tiangolo.com/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.42-blue.svg)](https://sqlmodel.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -133,7 +133,7 @@ Run the full quality gate (format, lint, typecheck, test) any time with
 │   │       ├── repository.py     # Database access (CRUD)
 │   │       ├── service.py        # Business logic
 │   │       └── routes.py         # FastAPI router endpoints
-│   ├── static/                   # Static assets (css, img)
+│   ├── static/                   # Static assets (css, img, js)
 │   ├── templates/                # Jinja2 templates
 │   │   └── index.html            # Home page
 │   ├── api.py                    # API Route structure

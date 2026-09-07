@@ -25,7 +25,7 @@ Visit [http://localhost:8000](http://localhost:8000) once the server is up.
 | `just setup` | Install deps and wire commit hooks — run once |
 | `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
 | `just new <module>` | Scaffold and register a complete DDD module |
-| `just check` | Run format → lint → typecheck → test in one gate |
+| `just check` | Run format → lint → typecheck → migration check → test in one gate |
 | `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
 | `just token` | Mint a signed JWT against the local mock OAuth server |
 
