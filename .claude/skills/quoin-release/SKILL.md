@@ -7,7 +7,7 @@ model: haiku
 
 # Releasing QuoinAPI
 
-A QuoinAPI release is a small, ordered ritual: changelog → version bump → changelog rename → commit → merge → tag. The git tag is the trigger — GitHub Actions creates the GitHub Release automatically once it lands. The long-form rationale lives in [docs/guides/release-workflow.md](../../../docs/guides/release-workflow.md); this skill is the in-the-moment checklist.
+A QuoinAPI release is a small, ordered ritual: changelog → version bump → changelog rename → commit → merge → tag → publish. The tag does **not** publish anything by itself — no release workflow exists in this repo, so the last step is yours to run. The long-form rationale lives in [docs/guides/release-workflow.md](../../../docs/guides/release-workflow.md); this skill is the in-the-moment checklist.
 
 ## Before you start
 
@@ -84,17 +84,41 @@ just tag
 
 `scripts/tag_release.py` reads the version from `app/__init__.py`, creates `vX.Y.Z`, and pushes it to `origin`. The script refuses to re-create an existing tag, so it's safe to re-run.
 
-GitHub Actions takes it from there: the tag push triggers the release workflow, which builds the artifacts and publishes the GitHub Release using the changelog section as the body.
+The tag push does **not** publish a GitHub Release. `copier-update.yml` is the
+only tag-triggered workflow in this repo; it verifies the `copier update` path
+and nothing else. Continue to step 6.
+
+### 6. Publish the GitHub Release
+
+Create it explicitly, using that version's changelog section as the body:
+
+```bash
+awk '/^## \[X\.Y\.Z\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md \
+  | gh release create vX.Y.Z --title vX.Y.Z --verify-tag --notes-file -
+```
+
+The `awk` prints the section between this version's `## [X.Y.Z] - date`
+heading and the next one, which is exactly the body shape `v0.8.0` through
+`v0.11.0` use. `--verify-tag` aborts if step 5's tag never reached `origin`,
+so a typo fails loudly instead of creating a release against a missing tag.
+
+Match the existing releases: the title is the bare tag (`v0.11.0`, no prose),
+neither draft nor pre-release. For a release candidate, add `--prerelease`.
 
 ## After the tag
 
 Verify the release landed:
 
-- Check the Actions tab for the release workflow run.
 - Confirm the GitHub Release page shows the `vX.Y.Z` entry with the changelog body.
+- Check the Actions tab: CI on `main` and **Copier Update Check** on the tag
+  should both be green. The update check is the one that matters — it proves
+  `copier update` still applies cleanly across the release boundary.
 - Pull `main` and confirm `git describe --tags` reports the new tag.
 
-If the release workflow fails, **don't delete the tag** — fix the workflow or the artifact, then re-run the workflow from the Actions UI. Deleting a published tag breaks consumers who already pulled it.
+If `gh release create` fails, **don't delete the tag** — fix the input and
+re-run the command; the tag is already public and deleting it breaks anyone
+who pulled it. If the *release* is wrong rather than the tag, edit it in place
+with `gh release edit vX.Y.Z --notes-file -`.
 
 ## Things that bite
 

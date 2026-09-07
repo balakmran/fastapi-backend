@@ -125,11 +125,13 @@ there is no workflow for it. If you want one, create it yourself once
 the tag is pushed:
 
 ```bash
-gh release create v1.2.0 --title v1.2.0 --notes-from-tag
+awk '/^## \[1\.2\.0\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md \
+  | gh release create v1.2.0 --title v1.2.0 --verify-tag --notes-file -
 ```
 
-Or use `--notes-file` to paste in the relevant `CHANGELOG.md` section
-instead of GitHub's auto-generated notes. Either way, the tag itself
+That uses the version's `CHANGELOG.md` section as the release body, which
+is the convention every release since `v0.8.0` follows. `--notes-from-tag`
+works too if you want the tag message instead. Either way, the tag itself
 (not a GitHub Release) is what `copier copy`, `copier update`, and
 `just verify-template-update` resolve against.
 
