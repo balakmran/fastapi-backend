@@ -28,7 +28,8 @@ This command runs all checks in sequence:
 1. **Format** → Auto-fixes code style
 2. **Lint** → Checks for code issues
 3. **Typecheck** → Verifies type annotations
-4. **Test** → Runs test suite with coverage
+4. **Migration check** → Fails if a model change has no migration
+5. **Test** → Runs test suite with coverage
 
 If all checks pass, you'll see:
 
@@ -83,6 +84,17 @@ Validates all type annotations using `ty`.
 - 100% type hint coverage
 - No type errors
 - Proper return types
+
+### Check Migrations
+
+```bash
+just migrate-check
+```
+
+Applies pending migrations, then runs `alembic check`: if a model in
+`models.py` has drifted from the schema the migrations build, the
+command fails. Catches the "changed the SQLModel, forgot
+`just migrate-gen`" mistake before CI does.
 
 ### Run Tests
 
@@ -188,6 +200,7 @@ The project maintains strict quality standards:
 | Format code    | `just format`    |
 | Lint code      | `just lint`      |
 | Type check     | `just typecheck` |
+| Check migrations | `just migrate-check` |
 | Run tests      | `just test`      |
 | Install hooks  | `just pi`        |
 | Run hooks      | `just pr`        |

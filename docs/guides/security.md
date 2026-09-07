@@ -280,11 +280,13 @@ execution order from outermost to innermost is:
 ```
 SecurityHeadersMiddleware  ← outermost: every response gets these headers
 RequestIDMiddleware
+AccessLogMiddleware        ← inside RequestID, so every line has request_id
 TrustedHostMiddleware      ← validates Host before CORS can short-circuit
 CORSMiddleware
 TimeoutMiddleware          ← reject oversize before the timeout clock ticks
 RequestSizeLimitMiddleware
-InFlightRequestMiddleware  ← innermost, closest to the router
+InFlightRequestMiddleware
+UnhandledErrorMiddleware   ← innermost, closest to the router
 ```
 
 SecurityHeaders and RequestID sit outermost so that error responses
@@ -303,6 +305,18 @@ rejected (400) request never reaches CORS and so doesn't carry CORS
 headers, but it does get the outer SecurityHeaders/RequestID treatment.
 `CORSMiddleware` still wraps `TimeoutMiddleware`/`RequestSizeLimitMiddleware`,
 so their 504/413 responses do carry CORS headers.
+
+`UnhandledErrorMiddleware` is innermost for the same reason, inverted:
+it catches an escaping exception *before* it unwinds past the stack, so
+the 500 it builds travels back out through CORS, `SecurityHeaders`, and
+`RequestID` like any other response. A handler registered against bare
+`Exception` cannot do this — Starlette moves it to
+`ServerErrorMiddleware`, outside everything. See the
+[error handling guide](error-handling.md#catch-all-for-uncaught-exceptions).
+
+`AccessLogMiddleware` sits inside `RequestID` (so the `request_id`
+contextvar is already bound) but outside the timeout and size limits, so
+504s, 413s, and 500s are logged with their real status and duration.
 
 ---
 
