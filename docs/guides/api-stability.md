@@ -86,13 +86,18 @@ rule below takes full effect starting at `1.0.0`.
   [architecture overview](../architecture/overview.md) documents this
   layering. Keeping the two separate is what lets `copier update`
   diffs stay small.
-- CI proves the mechanism, not the polish. The `Copier Update Check`
-  workflow (`just verify-template-update`) generates a project from the
-  previous release tag, runs `copier update` to the new tag, and fails on
-  leftover `.rej` conflicts — but it fires **only on release tags**, and it
-  does not run `just check` inside the generated project. Whether a fresh
-  scaffold passes its own quality gate is still verified by hand at release
-  time.
+- Two CI jobs stand behind this, and neither is run by hand:
+  **Scaffold Smoke Test** generates a project on every pull request and
+  runs its own `just check`, failing if that gate has to modify what it
+  was given; **Copier Update Check** fires on release tags, generating
+  from the previous tag, updating to the new one, and running the
+  updated project's `just check` — so a release is blocked both by a
+  scaffold that doesn't build and by an update that lands you somewhere
+  that doesn't.
+- What CI cannot prove is *your* reconciliation. It updates a pristine
+  generated project, which by construction has no local edits to
+  conflict with. See [Staying Current](staying-current.md) for what to
+  do when yours does.
 
 ## Deprecation & removal (template surface)
 
