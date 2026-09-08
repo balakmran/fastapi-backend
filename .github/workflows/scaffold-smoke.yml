@@ -1,0 +1,137 @@
+name: Scaffold Smoke Test
+
+# Generates a project from the working tree and runs its own full gate.
+#
+# This is the only job that tests what an adopter actually receives.
+# `ci.yml` proves the template repo is healthy; it says nothing about the
+# project `copier copy` produces, and the two can diverge -- v0.11.0
+# shipped a template whose generated `metadata.py` failed its own
+# `just lint`, because the substituted `long_description` pushed a line
+# past the 80-char limit. Nothing in CI could see that.
+#
+# Runs on pull requests, unlike `copier-update.yml` (tags only), so
+# scaffold breakage is caught before it is tagged rather than after.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: "scaffold-smoke-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Generate and gate a fresh project
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      # The generated project's settings prefix. `--defaults` leaves
+      # `project_name` as "QuoinAPI", so `env_prefix` derives as
+      # "QUOINAPI" -- deliberately NOT this repo's "QUOIN", which is the
+      # point: a wrong prefix here means the generated project ignores
+      # every variable below and fails against a database that isn't there.
+      QUOINAPI_ENV: test
+      QUOINAPI_POSTGRES_HOST: localhost
+      QUOINAPI_POSTGRES_PORT: 5432
+      QUOINAPI_POSTGRES_USER: postgres
+      QUOINAPI_POSTGRES_PASSWORD: postgres
+      QUOINAPI_POSTGRES_DB: postgres
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # The default shallow fetch is enough: `--vcs-ref=HEAD` names a
+        # ref directly, so Copier needs no history or tags to resolve it.
+        # (`copier-update.yml` needs `fetch-depth: 0` because it does.)
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
+      - name: Generate a project from the working tree
+        # `--vcs-ref=HEAD` is load-bearing. Against a local git template
+        # Copier defaults to the latest *tag*, which would silently
+        # smoke-test the previous release instead of this commit.
+        run: |
+          uvx copier copy --defaults --trust --vcs-ref=HEAD \
+            . "${RUNNER_TEMP}/smoke-project"
+
+      - name: Confirm the project is de-branded
+        working-directory: ${{ runner.temp }}/smoke-project
+        run: |
+          # Copier's own files must self-destruct, and this repo's
+          # roadmap must not ship to adopters.
+          for leaked in copier.yml scripts/copier_setup.py ROADMAP.md; do
+            if [ -e "$leaked" ]; then
+              echo "::error::$leaked leaked into the generated project"
+              exit 1
+            fi
+          done
+
+      - name: Install the generated project's dependencies
+        working-directory: ${{ runner.temp }}/smoke-project
+        # No uv.lock ships with the template (it is in copier.yml's
+        # _exclude), so this resolves fresh -- which also means a bad
+        # dependency floor surfaces here first.
+        run: just install
+
+      - name: Baseline the generated tree
+        working-directory: ${{ runner.temp }}/smoke-project
+        # Commit *after* install so the lockfile uv just resolved is part
+        # of the baseline rather than showing up as drift below.
+        run: |
+          git init -q .
+          git add -A
+          git -c user.email=smoke@example.com -c user.name=smoke \
+            commit -qm "generated"
+
+      - name: Run the generated project's own gate
+        working-directory: ${{ runner.temp }}/smoke-project
+        # CI=true makes the project's `_db-check` skip `docker compose`
+        # and use the service container above.
+        env:
+          CI: "true"
+        run: just check
+
+      - name: Confirm the gate changed nothing
+        working-directory: ${{ runner.temp }}/smoke-project
+        # `just check` formats before it lints, so a generated tree that
+        # was not already formatted still passes -- it just rewrites
+        # itself on the way through, leaving an adopter's first run with
+        # a dirty tree. `copier_setup.py` formats at generation time to
+        # prevent that; this step is what keeps it honest.
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::the generated project's own gate modified it"
+            git status --short
+            git --no-pager diff
+            exit 1
+          fi
