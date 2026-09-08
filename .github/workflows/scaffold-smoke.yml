@@ -99,8 +99,15 @@ jobs:
       - name: Install the generated project's dependencies
         working-directory: ${{ runner.temp }}/smoke-project
         # No uv.lock ships with the template (it is in copier.yml's
-        # _exclude), so this resolves fresh -- which also means a bad
-        # dependency floor surfaces here first.
+        # _exclude), so this resolves fresh every run.
+        #
+        # That cuts both ways, and the cost is deliberate: a bad
+        # dependency floor surfaces here first, but so does an upstream
+        # release that breaks nothing in this pull request. A red gate
+        # below on a docs-only change is most likely that -- check
+        # whether the same commit passed yesterday before hunting your
+        # own diff. `ci.yml` runs against the committed lockfile and is
+        # the one to trust when the two disagree.
         run: just install
 
       - name: Baseline the generated tree
