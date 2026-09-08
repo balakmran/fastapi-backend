@@ -33,6 +33,33 @@
   database rather than on your code, so an advisory published overnight
   would otherwise fail pull requests that changed nothing.
 
+### Changed
+
+- **Release tooling**: `just tag` (alias `just release`) now publishes
+  the GitHub Release as well as pushing the tag, using that version's
+  `CHANGELOG.md` section as the body. No tag-triggered workflow creates
+  one -- `copier-update.yml` only verifies the `copier update` path --
+  so every release from `v0.8.0` to `v0.11.0` was published by hand.
+
+  Both halves are idempotent: an existing tag is not recreated, an
+  existing release is left alone, so re-running after a partial failure
+  is safe. `gh` is now required, and both its presence and its
+  authentication are checked *before* the tag is created, so a missing
+  prerequisite costs nothing instead of leaving a pushed tag with no
+  release. `just tag --no-release` keeps the old tag-only behaviour and
+  needs no `gh`.
+
+  **Manual reconciliation**: this is a breaking change to a covered CLI
+  recipe under the [stability
+  policy](../guides/api-stability.md#breaking-vs-non-breaking) -- it
+  gives an existing recipe a new outward-facing side effect and a new
+  required tool. After `copier update`, decide which you want for your
+  own repository: install and authenticate `gh` to publish releases, or
+  run `just tag --no-release` (and consider making that the default in
+  your `justfile`) to keep tagging alone. The stability guide gains two
+  rows covering `justfile` recipe changes, which the table previously
+  addressed only for `just new` scaffold output.
+
 ### Fixed
 
 - **Template**: `copier copy` now produces an already-formatted project.
