@@ -168,10 +168,18 @@ enforced by `fail_under` in `[tool.coverage.report]`
 ([`pyproject.toml`](../../pyproject.toml)), not by a separate CI step,
 so the same gate applies locally and in CI.
 
+A second job runs the same gate somewhere else: **Scaffold Smoke Test**
+([`scaffold-smoke.yml`](../../.github/workflows/scaffold-smoke.yml))
+generates a project from the branch under review and runs *its* `just
+check`, then fails if that gate modified the generated tree. `ci.yml`
+proves this repo is healthy; only the smoke job proves the project an
+adopter receives is.
+
 Dependency CVE scanning is **not** part of this pipeline or of
 `just check` — it needs network access and its result depends on the
-OSV database rather than on your code. Run `just audit` by hand after
-dependency changes; see
+OSV database rather than on your code, so an advisory filed overnight
+would fail pull requests that changed nothing. It runs weekly on its own
+schedule instead; see
 [Dependency Scanning](dependency-scanning.md#uv-audit).
 
 Pull requests cannot be merged until all checks pass ✅

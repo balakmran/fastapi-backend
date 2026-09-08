@@ -37,31 +37,47 @@ dependency set that does not match what you declared.
 
 ### Where it runs
 
-`uv audit` runs **on demand only** — it is not wired into CI, into
-`just check`, or into the `prek` hooks. It needs network access, and
-its result depends on the OSV database rather than on your code, so an
-advisory published overnight would otherwise block unrelated commits,
-pushes, and pull requests that changed nothing.
+`uv audit` is **not** wired into `just check`, the `prek` hooks, or any
+commit-triggered CI job. It needs network access, and its result depends
+on the OSV database rather than on your code, so an advisory published
+overnight would otherwise block unrelated commits, pushes, and pull
+requests that changed nothing.
 
-Run it yourself at the points where the answer actually matters:
+It does run on a schedule. The
+[`dependency-audit.yml`](../../.github/workflows/dependency-audit.yml)
+workflow runs both recipes every Monday at 07:00 UTC — and on demand via
+*Run workflow* — filing the report as a GitHub issue labelled
+`dependency-audit` when either finds something. A second finding while
+that issue is still open is added as a comment rather than a new issue,
+so a long-lived advisory doesn't file a fresh ticket every week.
+
+Two things to know about scheduled workflows: GitHub runs them only from
+the default branch, and disables them after 60 days without repository
+activity. A red run means triage the advisory, not that CI broke.
+
+Run the recipes yourself at the points where the answer matters sooner
+than next Monday:
 
 - **After any dependency change** — `uv lock --upgrade`, a new `uv add`,
   or reviewing a Dependabot PR. The
   [`quoin-deps-upgrade`](ai-setup.md) skill includes this step.
 - **Before cutting a release** — see the
   [release workflow](release-workflow.md).
-- **Periodically**, to catch advisories published against dependencies
-  that have *not* changed. Nothing in a commit-triggered pipeline will
-  surface those; `just audit` on a quiet Monday will.
+- **Before merging anything you intend to tag.** The weekly run reports
+  on `main` as it stood on Monday, not on your branch.
 
-!!! tip "Re-enabling it in CI"
+The schedule's real job is the case you cannot prompt yourself to check:
+an advisory filed against a dependency that has *not* changed. Nothing
+in a commit-triggered pipeline will ever surface those.
 
-    If you want this enforced rather than remembered, add a job to
-    [`ci.yml`](../../.github/workflows/ci.yml) that checks out the repo,
-    installs uv and `just`, and runs `just audit` — no `uv sync` is
-    needed, since the audit reads `uv.lock` without building an
-    environment. Adding a `schedule:` trigger is what buys you the
-    unchanged-dependency coverage above.
+!!! tip "Tuning the schedule"
+
+    Change the `cron` expression in
+    [`dependency-audit.yml`](../../.github/workflows/dependency-audit.yml)
+    for a different cadence, or delete the `schedule:` trigger to leave
+    only the manual *Run workflow* button. The job needs no `uv sync` —
+    both recipes read `uv.lock` without building an environment — so it
+    stays cheap whatever cadence you pick.
 
 ### Remediating a finding
 

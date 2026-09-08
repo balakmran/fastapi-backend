@@ -2,6 +2,37 @@
 
 ## [Unreleased]
 
+### Added
+
+- **CI**: a **Scaffold Smoke Test** workflow generates a project from
+  the branch under review (`copier copy --vcs-ref=HEAD`) and runs that
+  project's own `just check` against a Postgres service, then fails if
+  the gate modified the generated tree. Until now nothing in CI
+  exercised generated output — `v0.11.0` shipped a template whose
+  generated `metadata.py` failed its own `just lint`, and only a manual
+  run caught it. The job also asserts `copier.yml`,
+  `scripts/copier_setup.py`, and `ROADMAP.md` do not leak into the
+  generated project.
+- **CI**: a **Dependency Audit** workflow runs `just audit` and
+  `just audit-prod` every Monday at 07:00 UTC (and on demand), filing
+  findings as a GitHub issue labelled `dependency-audit` and commenting
+  on that issue rather than opening a duplicate while it stays open. It
+  is deliberately not part of `ci.yml`: the result depends on the OSV
+  database rather than on your code, so an advisory published overnight
+  would otherwise fail pull requests that changed nothing.
+
+### Fixed
+
+- **Template**: `copier copy` now produces an already-formatted project.
+  Substituting identifiers changes both line length and import sort
+  order, so five files arrived unformatted — a longer `env_prefix`
+  splits a line that fit, a shorter exception name lets one join, and a
+  renamed import moves in the isort ordering. No wrapping choice in the
+  template source can satisfy every project name at once, so
+  `scripts/copier_setup.py` now runs `ruff check --fix` and
+  `ruff format` after substitution. Previously a fresh clone's first
+  `just check` passed but left five modified files in the working tree.
+
 ## [0.11.0] - 2026-09-07
 
 ### Added

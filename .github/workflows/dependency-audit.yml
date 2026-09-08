@@ -1,0 +1,113 @@
+name: Dependency Audit
+
+# Scans the locked dependency tree for known CVEs on a schedule.
+#
+# Deliberately NOT part of `ci.yml`. The result depends on the OSV
+# database rather than on your code, so an advisory published overnight
+# would fail pull requests that changed nothing. A schedule is what
+# catches advisories filed against dependencies that have not moved --
+# the one class of finding no commit-triggered pipeline can ever see.
+#
+# Note: GitHub runs scheduled workflows only on the default branch, and
+# disables them after 60 days without repository activity. A red run
+# here means triage the advisory, not that the pipeline broke.
+
+on:
+  schedule:
+    # Mondays, 07:00 UTC -- a fresh report at the start of the week.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: Scan locked dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
+      - name: Audit
+        # No `uv sync`: both recipes read uv.lock and never build an
+        # environment. Both run even if the first fails, so one report
+        # shows whether a finding reaches the shipped image or is
+        # confined to dev/test/docs groups.
+        run: |
+          status=0
+          {
+            echo "## \`just audit\` — all dependency groups"
+            echo
+            echo '```'
+          } > audit-report.md
+          just audit >> audit-report.md 2>&1 || status=1
+          {
+            echo '```'
+            echo
+            echo "## \`just audit-prod\` — runtime only (what ships)"
+            echo
+            echo '```'
+          } >> audit-report.md
+          just audit-prod >> audit-report.md 2>&1 || status=1
+          echo '```' >> audit-report.md
+          cat audit-report.md
+          exit $status
+
+      - name: Report the finding
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Passed as env, never interpolated into the script below.
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo
+            echo "---"
+            echo
+            echo "Reported by [Dependency Audit]($RUN_URL)."
+            echo "Remediation ladder:"
+            echo "\`docs/guides/dependency-scanning.md\`."
+          } >> audit-report.md
+
+          gh label create dependency-audit \
+            --description "Automated CVE scan finding" \
+            --color D93F0B 2>/dev/null || true
+
+          existing=$(gh issue list --label dependency-audit --state open \
+            --limit 1 --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            # Comment rather than open a duplicate: the schedule would
+            # otherwise file a fresh issue every Monday until it is fixed.
+            gh issue comment "$existing" --body-file audit-report.md
+            echo "Commented on existing issue #$existing"
+          else
+            gh issue create \
+              --title "Dependency audit: advisories found ($(date -u +%Y-%m-%d))" \
+              --label dependency-audit \
+              --body-file audit-report.md
+          fi
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: audit-report
+          path: audit-report.md
+          if-no-files-found: ignore
