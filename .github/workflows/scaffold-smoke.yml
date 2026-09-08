@@ -87,9 +87,18 @@ jobs:
       - name: Confirm the project is de-branded
         working-directory: ${{ runner.temp }}/smoke-project
         run: |
-          # Copier's own files must self-destruct, and this repo's
-          # roadmap must not ship to adopters.
-          for leaked in copier.yml scripts/copier_setup.py ROADMAP.md; do
+          # Copier's own files must self-destruct, this repo's roadmap
+          # must not ship to adopters, and neither should the two
+          # template-maintenance workflows that only ever fail outside
+          # this repo (see copier.yml's _exclude for why).
+          leaked_paths=(
+            copier.yml
+            scripts/copier_setup.py
+            ROADMAP.md
+            .github/workflows/scaffold-smoke.yml
+            .github/workflows/copier-update.yml
+          )
+          for leaked in "${leaked_paths[@]}"; do
             if [ -e "$leaked" ]; then
               echo "::error::$leaked leaked into the generated project"
               exit 1
