@@ -229,9 +229,10 @@ docs-serve:
 bump part="patch":
     @uv run python scripts/bump_version.py {{part}}
 
-# Create and push git tag for current version
-tag:
-    @uv run python scripts/tag_release.py
+# Tag the current version and publish its GitHub Release
+# (pass --no-release to tag only; that path does not need gh)
+tag *args:
+    @uv run python scripts/tag_release.py {{args}}
 
 # Verify `copier update` applies cleanly between two template tags
 verify-template-update previous current *args:

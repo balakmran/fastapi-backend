@@ -72,6 +72,8 @@ rule below takes full effect starting at `1.0.0`.
 | Change the signature of `require_roles`, `get_session`, or the type of a raised domain exception | Breaking |
 | Add a new domain exception type | Non-breaking |
 | Change what `just new` scaffolds (new required files or deps) | Breaking |
+| Give an existing `justfile` recipe a new side effect or a new required tool | Breaking |
+| Add a new `justfile` recipe, or a flag whose absence preserves current behaviour | Non-breaking |
 | Fix a bug in generated scaffold output | Non-breaking (patch) |
 | Change what a generated project must run to build its test/migration schema | Breaking |
 

@@ -113,27 +113,40 @@ This command:
 
 1. Creates a Git tag (e.g., `v1.2.0`)
 2. Pushes the tag to the remote repository
-3. Triggers the [Copier Update Check](#6-copier-update-verification-automatic)
+3. Publishes the GitHub Release, using that version's `CHANGELOG.md`
+   section as the body
+4. Triggers the [Copier Update Check](#6-copier-update-verification-automatic)
    workflow
+
+Both halves are idempotent, so re-running after a partial failure is
+safe: an existing tag is not recreated, and an existing release is left
+alone rather than aborting the run.
 
 ---
 
 ### 5. GitHub Release
 
-Pushing the tag does **not** create a GitHub Release automatically —
-there is no workflow for it. If you want one, create it yourself once
-the tag is pushed:
+Step 4 already published it — no workflow does this, so `just tag` is
+what creates it. The release is titled with the bare tag and its body is
+the version's `CHANGELOG.md` section, which is the convention every
+release since `v0.8.0` follows.
+
+`gh` must be installed and authenticated. It is checked *before* the tag
+is created, so a missing prerequisite costs nothing rather than leaving
+a pushed tag with no release:
 
 ```bash
-awk '/^## \[1\.2\.0\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md \
-  | gh release create v1.2.0 --title v1.2.0 --verify-tag --notes-file -
+just tag --no-release   # tag only; needs no gh
 ```
 
-That uses the version's `CHANGELOG.md` section as the release body, which
-is the convention every release since `v0.8.0` follows. `--notes-from-tag`
-works too if you want the tag message instead. Either way, the tag itself
-(not a GitHub Release) is what `copier copy`, `copier update`, and
-`just verify-template-update` resolve against.
+If the release step fails after the tag is pushed, **don't delete the
+tag** — fix the problem and re-run `just tag`, which skips the existing
+tag and retries only the release. To correct a published release's
+notes, edit it in place with
+`gh release edit v1.2.0 --notes-file -`.
+
+The tag itself (not the GitHub Release) is what `copier copy`,
+`copier update`, and `just verify-template-update` resolve against.
 
 View tags at:
 [https://github.com/balakmran/quoin-api/tags](https://github.com/balakmran/quoin-api/tags)
@@ -199,11 +212,9 @@ Before creating a release:
 - [ ] `CHANGELOG.md` is updated with all changes
 - [ ] Version is bumped (`just bump part="..."`)
 - [ ] Changes are merged to `main` branch
-- [ ] Tag is created and pushed (`just tag`)
+- [ ] Tag is pushed and the GitHub Release is published (`just tag`)
 - [ ] Copier Update Check passes on the new tag (automatic; see
       [above](#6-copier-update-verification-automatic))
-- [ ] GitHub Release is created, if desired (`gh release create`; not
-      automatic)
 - [ ] Documentation is deployed
 
 ---

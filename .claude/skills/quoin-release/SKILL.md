@@ -7,7 +7,7 @@ model: haiku
 
 # Releasing QuoinAPI
 
-A QuoinAPI release is a small, ordered ritual: changelog → version bump → changelog rename → commit → merge → tag → publish. The tag does **not** publish anything by itself — no release workflow exists in this repo, so the last step is yours to run. The long-form rationale lives in [docs/guides/release-workflow.md](../../../docs/guides/release-workflow.md); this skill is the in-the-moment checklist.
+A QuoinAPI release is a small, ordered ritual: changelog → version bump → changelog rename → commit → merge → tag. `just tag` publishes the GitHub Release itself — no workflow does, so the recipe does. The long-form rationale lives in [docs/guides/release-workflow.md](../../../docs/guides/release-workflow.md); this skill is the in-the-moment checklist.
 
 ## Before you start
 
@@ -82,28 +82,17 @@ Once the changelog/bump commit is on `main` and you've pulled it locally:
 just tag
 ```
 
-`scripts/tag_release.py` reads the version from `app/__init__.py`, creates `vX.Y.Z`, and pushes it to `origin`. The script refuses to re-create an existing tag, so it's safe to re-run.
+`scripts/tag_release.py` reads the version from `app/__init__.py`, creates and pushes `vX.Y.Z`, then publishes the GitHub Release with that version's changelog section as the body. Both halves are idempotent: an existing tag is not recreated, an existing release is left alone, so a re-run after a partial failure is safe.
 
-The tag push does **not** publish a GitHub Release. `copier-update.yml` is the
-only tag-triggered workflow in this repo; it verifies the `copier update` path
-and nothing else. Continue to step 6.
-
-### 6. Publish the GitHub Release
-
-Create it explicitly, using that version's changelog section as the body:
+`gh` must be installed and authenticated. Both are checked **before** the tag is created, so a missing prerequisite costs nothing rather than leaving a pushed tag with no release. To tag without publishing:
 
 ```bash
-awk '/^## \[X\.Y\.Z\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md \
-  | gh release create vX.Y.Z --title vX.Y.Z --verify-tag --notes-file -
+just tag --no-release
 ```
 
-The `awk` prints the section between this version's `## [X.Y.Z] - date`
-heading and the next one, which is exactly the body shape `v0.8.0` through
-`v0.11.0` use. `--verify-tag` aborts if step 5's tag never reached `origin`,
-so a typo fails loudly instead of creating a release against a missing tag.
+The release matches every tag since `v0.8.0`: title is the bare tag (`v0.11.0`, no prose), body is the changelog section starting at `### Added`, neither draft nor pre-release.
 
-Match the existing releases: the title is the bare tag (`v0.11.0`, no prose),
-neither draft nor pre-release. For a release candidate, add `--prerelease`.
+Note: the script's version pattern is strictly `X.Y.Z`, so it cannot tag a pre-release such as `v1.0.0-rc.1` — that needs both a wider pattern and `--prerelease`.
 
 ## After the tag
 
@@ -115,10 +104,11 @@ Verify the release landed:
   `copier update` still applies cleanly across the release boundary.
 - Pull `main` and confirm `git describe --tags` reports the new tag.
 
-If `gh release create` fails, **don't delete the tag** — fix the input and
-re-run the command; the tag is already public and deleting it breaks anyone
-who pulled it. If the *release* is wrong rather than the tag, edit it in place
-with `gh release edit vX.Y.Z --notes-file -`.
+If the release step fails after the tag is pushed, **don't delete the tag** —
+fix the problem and re-run `just tag`, which skips the existing tag and retries
+only the release. The tag is already public and deleting it breaks anyone who
+pulled it. If the *release* is wrong rather than the tag, edit it in place with
+`gh release edit vX.Y.Z --notes-file -`.
 
 ## Things that bite
 
