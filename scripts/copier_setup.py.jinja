@@ -1,5 +1,7 @@
 import os
 import re
+import shutil
+import subprocess
 import textwrap
 from pathlib import Path
 
@@ -342,6 +344,43 @@ def prune_sync_docs() -> None:
     print("Pruned ROADMAP from scripts/sync_docs.py")
 
 
+def format_sources() -> None:
+    """Re-run the formatter over the generated tree.
+
+    Substituting identifiers changes both line length and import sort
+    order, so source that was formatted in the template can land here
+    unformatted: a long line splits, a shorter name lets one join, and a
+    renamed import moves in the sort. No amount of hand-wrapping in the
+    template fixes this -- the correct output genuinely differs per
+    project name -- so format once here instead, and a fresh clone's
+    first `just check` has nothing to rewrite.
+
+    Best effort: a failure leaves a tidy-but-unformatted project, which
+    `just check` fixes on its first run.
+    """
+    if shutil.which("uvx") is None:
+        print("Warning: uvx not found; skipping format. Run `just check`.")
+        return
+
+    for args in (["ruff", "check", "--fix", "."], ["ruff", "format", "."]):
+        try:
+            # `ruff check` exits non-zero when unfixable violations
+            # remain. Not fatal here: the project's own `just check` is
+            # the gate, and it reports them far better than this script.
+            subprocess.run(
+                ["uvx", *args],
+                cwd=BASE_DIR,
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            print(f"Warning: `uvx {' '.join(args)}` failed ({exc}).")
+            return
+
+    print("Formatted generated sources")
+
+
 if __name__ == "__main__":
     print(f"Running post-generation setup for {PROJECT_NAME}...")
     run_replacements()
@@ -351,6 +390,7 @@ if __name__ == "__main__":
     clean_zensical()
     strip_removed_links()
     prune_sync_docs()
+    format_sources()
 
     # Self-destruct copier files from the generated project
     try:
