@@ -344,6 +344,19 @@ def prune_sync_docs() -> None:
     print("Pruned ROADMAP from scripts/sync_docs.py")
 
 
+def _pinned_ruff() -> str | None:
+    """Read the ruff version pinned by the generated `pyproject.toml`.
+
+    Returns:
+        The pinned version, or None if no pin is present.
+    """
+    pyproject = BASE_DIR / "pyproject.toml"
+    if not pyproject.is_file():
+        return None
+    match = re.search(r'"ruff==([^"]+)"', pyproject.read_text(encoding="utf-8"))
+    return match.group(1) if match else None
+
+
 def format_sources() -> None:
     """Re-run the formatter over the generated tree.
 
@@ -362,23 +375,45 @@ def format_sources() -> None:
         print("Warning: uvx not found; skipping format. Run `just check`.")
         return
 
-    for args in (["ruff", "check", "--fix", "."], ["ruff", "format", "."]):
+    # Must be the version the project pins, not whatever uvx resolves.
+    # Formatting with one ruff and checking with another reintroduces
+    # exactly the drift this function exists to remove.
+    pin = _pinned_ruff()
+    if pin is None:
+        print("Warning: no ruff pin found in pyproject.toml; skipping.")
+        print("Run `just check` in the new project to format it.")
+        return
+    ruff = ["uvx", "--from", f"ruff=={pin}", "ruff"]
+
+    # `ruff check --fix` exits non-zero merely because unfixable
+    # violations remain -- the project's own `just check` reports those
+    # far better than this script can. Only the format pass must succeed.
+    for args, must_succeed in (
+        (["check", "--fix", "."], False),
+        (["format", "."], True),
+    ):
         try:
-            # `ruff check` exits non-zero when unfixable violations
-            # remain. Not fatal here: the project's own `just check` is
-            # the gate, and it reports them far better than this script.
-            subprocess.run(
-                ["uvx", *args],
+            result = subprocess.run(
+                [*ruff, *args],
                 cwd=BASE_DIR,
                 capture_output=True,
                 text=True,
                 timeout=180,
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            print(f"Warning: `uvx {' '.join(args)}` failed ({exc}).")
+            print(f"Warning: `ruff {args[0]}` failed ({exc}).")
+            print("Run `just check` in the new project to format it.")
+            return
+        if must_succeed and result.returncode != 0:
+            # Never fall through to the success message: an offline
+            # generation fails here, and silently claiming success
+            # leaves a dirty tree with no explanation for it.
+            print(f"Warning: `ruff {args[0]}` failed:")
+            print(result.stderr.strip() or result.stdout.strip())
+            print("Run `just check` in the new project to format it.")
             return
 
-    print("Formatted generated sources")
+    print(f"Formatted generated sources (ruff {pin})")
 
 
 if __name__ == "__main__":

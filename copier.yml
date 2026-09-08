@@ -68,6 +68,14 @@ _exclude:
   - "docs/project/changelog.md"
   - "docs/javascripts/home.js"
   - "ROADMAP.md"
+  # Template-maintenance CI. A generated project is not a template --
+  # copier.yml self-destructs during setup -- so these two only ever
+  # fail there. Their QUOINAPI_* service variables are not rewritten
+  # either: the substitution key is "QUOIN_", and "QUOINAPI_ENV" does
+  # not contain it, so they would point an adopter's gate at a prefix
+  # their project never reads.
+  - ".github/workflows/scaffold-smoke.yml"
+  - ".github/workflows/copier-update.yml"
 
 _tasks:
   - "python3 scripts/copier_setup.py"
