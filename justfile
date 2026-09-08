@@ -234,5 +234,5 @@ tag:
     @uv run python scripts/tag_release.py
 
 # Verify `copier update` applies cleanly between two template tags
-verify-template-update previous current:
-    uv run python scripts/verify_template_update.py {{previous}} {{current}}
+verify-template-update previous current *args:
+    uv run python scripts/verify_template_update.py {{previous}} {{current}} {{args}}

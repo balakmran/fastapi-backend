@@ -9,16 +9,27 @@ only runs against a *generated* project, not this repository itself.
 This script proves the mechanism still works between two tags: generate a
 project from the older tag, commit it as its own git repo (required for
 `copier update` to compute a diff), then update it to the newer tag and
-check the result is clean. It intentionally does NOT run `just check` (or
-any quality gate) against the generated project — the scaffold passing
-`just check` out of the box is a separate, already-roadmapped concern
-(see ROADMAP.md, "Template Completeness"); this script only answers
-"does `copier update` itself work", not "is the scaffold polished".
+check the result is clean.
+
+By default it answers only "does `copier update` itself work" — no
+conflicts, and the answers file records the new tag. Pass `--check` to
+also run the *updated* project's own `just check`, which answers the
+other half: that what an adopter is left holding after an update still
+builds, types, migrates and passes its tests.
+
+`--check` is opt-in because it needs a reachable Postgres and the
+generated project's own settings prefix in the environment (`--defaults`
+yields `QUOINAPI_*`). CI supplies both; a local run wanting the same
+proof must too, and must not have its own stack already bound to the
+port. `CI=true` is set for the gate so the project's `_db-check` skips
+`docker compose` and uses whatever database the environment points at.
 
 Usage:
-    uv run python scripts/verify_template_update.py <previous-tag> <current-tag>
+    uv run python scripts/verify_template_update.py \
+        <previous-tag> <current-tag> [--check]
 """
 
+import os
 import re
 import shutil
 import subprocess
@@ -28,7 +39,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 _COMMIT_LINE = re.compile(r"^_commit:\s*(\S+)\s*$", re.MULTILINE)
-EXPECTED_ARGS = 3
+EXPECTED_TAG_ARGS = 2
 
 
 def _run(
@@ -39,7 +50,10 @@ def _run(
     Args:
         args: The command and its arguments.
         cwd: Working directory to run the command in.
-        env: Optional environment overrides merged onto the current one.
+        env: Complete environment for the child. Replaces (does not
+            merge with) the parent's — pass `{**os.environ, ...}` to
+            extend it. Callers rely on this to isolate git from a
+            developer's global config.
 
     Raises:
         SystemExit: If the command exits non-zero.
@@ -108,12 +122,31 @@ def _check_recorded_commit(project: Path, expected_tag: str) -> None:
         raise SystemExit(1)
 
 
-def verify(previous_tag: str, current_tag: str) -> None:
+def _run_project_gate(project: Path) -> None:
+    """Run the updated project's own `just check`.
+
+    Args:
+        project: The generated project, already updated to the new tag.
+    """
+    # Full environment: `just` needs PATH, and the project needs whatever
+    # <PREFIX>_POSTGRES_* the caller set. CI=true makes its `_db-check`
+    # skip `docker compose` and trust that database.
+    env = {**os.environ, "CI": "true"}
+    print("[verify-template-update] installing the updated project...")
+    _run(["just", "install"], cwd=project, env=env)
+    print("[verify-template-update] running the updated project's gate...")
+    _run(["just", "check"], cwd=project, env=env)
+
+
+def verify(
+    previous_tag: str, current_tag: str, *, run_check: bool = False
+) -> None:
     """Generate from `previous_tag`, update to `current_tag`, and verify.
 
     Args:
         previous_tag: The older template tag to generate a project from.
         current_tag: The newer template tag to update that project to.
+        run_check: Also run the updated project's own `just check`.
     """
     with tempfile.TemporaryDirectory(prefix="quoin-template-update-") as tmp:
         project = Path(tmp) / "generated-project"
@@ -159,6 +192,9 @@ def verify(previous_tag: str, current_tag: str) -> None:
         _check_no_conflicts(project)
         _check_recorded_commit(project, current_tag)
 
+        if run_check:
+            _run_project_gate(project)
+
     print(
         f"[verify-template-update] OK: {previous_tag} -> {current_tag} "
         "applied cleanly."
@@ -172,17 +208,25 @@ def main(argv: list[str]) -> int:
         0 on a clean update, non-zero if `copier` is missing or the
         update left conflicts or an unexpected recorded commit.
     """
-    if len(argv) != EXPECTED_ARGS:
+    args = list(argv[1:])
+    run_check = "--check" in args
+    if run_check:
+        args.remove("--check")
+
+    if len(args) != EXPECTED_TAG_ARGS:
         print(
             "Usage: python scripts/verify_template_update.py "
-            "<previous-tag> <current-tag>"
+            "<previous-tag> <current-tag> [--check]"
         )
         return 1
     if shutil.which("uvx") is None:
         print("[verify-template-update] 'uvx' not found on PATH.")
         return 1
+    if run_check and shutil.which("just") is None:
+        print("[verify-template-update] '--check' needs 'just' on PATH.")
+        return 1
 
-    verify(argv[1], argv[2])
+    verify(args[0], args[1], run_check=run_check)
     return 0
 
 

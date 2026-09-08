@@ -13,6 +13,18 @@
   run caught it. The job also asserts `copier.yml`,
   `scripts/copier_setup.py`, and `ROADMAP.md` do not leak into the
   generated project.
+- **Docs**: a new [Staying Current](../guides/staying-current.md)
+  guide covers the adopter's side of the stability policy — what
+  `copier update` actually merges, how to read a **manual
+  reconciliation** note, resolving `.rej` conflicts, and why keeping
+  `app/core/` unedited is what keeps future updates cheap. `0.11.0` was
+  the first release to demand real reconciliation work; nothing until
+  now documented how to do it.
+- **CI**: the **Copier Update Check** workflow now runs the *updated*
+  project's own `just check` (via `just verify-template-update ...
+  --check`), against a Postgres service. It previously proved only that
+  the update applied without conflicts, not that what an adopter is
+  left holding still works.
 - **CI**: a **Dependency Audit** workflow runs `just audit` and
   `just audit-prod` every Monday at 07:00 UTC (and on demand), filing
   findings as a GitHub issue labelled `dependency-audit` and commenting

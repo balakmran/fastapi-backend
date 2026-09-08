@@ -1,10 +1,11 @@
 name: Copier Update Check
 
 # Verifies the template's `copier update` path still works across a real
-# release. This only runs on release tags, not every push/PR — it proves
-# the update mechanism itself, not scaffold polish (that's tracked
-# separately in ROADMAP.md), so it isn't worth paying its cost on every
-# change.
+# release: generate from the previous tag, update to this one, and run
+# the updated project's own `just check`. Tags only — `scaffold-smoke.yml`
+# covers fresh generation on every pull request; this one costs a second
+# generation plus a full gate, and has nothing to compare against until a
+# release boundary exists.
 
 on:
   push:
@@ -15,6 +16,31 @@ jobs:
   verify-update:
     name: Verify copier update path
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      # The *generated* project's prefix, not this repo's QUOIN_ — the
+      # script generates with `--defaults`, so `env_prefix` is QUOINAPI.
+      QUOINAPI_ENV: test
+      QUOINAPI_POSTGRES_HOST: localhost
+      QUOINAPI_POSTGRES_PORT: 5432
+      QUOINAPI_POSTGRES_USER: postgres
+      QUOINAPI_POSTGRES_PASSWORD: postgres
+      QUOINAPI_POSTGRES_DB: postgres
 
     steps:
       - name: Checkout with full tag history
@@ -58,4 +84,8 @@ jobs:
         env:
           PREVIOUS_TAG: ${{ steps.tags.outputs.previous }}
           CURRENT_TAG: ${{ steps.tags.outputs.current }}
-        run: just verify-template-update "$PREVIOUS_TAG" "$CURRENT_TAG"
+        # `--check` runs the updated project's own gate. Without it this
+        # proves only that the update applied, not that what the adopter
+        # is left holding still works.
+        run: |
+          just verify-template-update "$PREVIOUS_TAG" "$CURRENT_TAG" --check

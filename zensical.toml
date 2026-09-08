@@ -52,6 +52,7 @@ nav = [
     ]},
     { "Project" = [
         { "API Stability & SemVer" = "guides/api-stability.md" },
+        { "Staying Current" = "guides/staying-current.md" },
         { "Release Workflow" = "guides/release-workflow.md" },
         { "Security Policy" = "project/security-policy.md" },
         { "Contributing" = "project/contributing.md" },
