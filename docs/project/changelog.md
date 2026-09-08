@@ -11,8 +11,9 @@
   exercised generated output — `v0.11.0` shipped a template whose
   generated `metadata.py` failed its own `just lint`, and only a manual
   run caught it. The job also asserts `copier.yml`,
-  `scripts/copier_setup.py`, and `ROADMAP.md` do not leak into the
-  generated project.
+  `scripts/copier_setup.py`, `ROADMAP.md`, and the two
+  template-maintenance workflows below do not leak into the generated
+  project.
 - **Docs**: a new [Staying Current](../guides/staying-current.md)
   guide covers the adopter's side of the stability policy — what
   `copier update` actually merges, how to read a **manual
@@ -71,6 +72,18 @@
   `scripts/copier_setup.py` now runs `ruff check --fix` and
   `ruff format` after substitution. Previously a fresh clone's first
   `just check` passed but left five modified files in the working tree.
+- **Template**: `scaffold-smoke.yml` and `copier-update.yml` no longer
+  ship to generated projects. Both are template-maintenance CI that
+  only ever fails there — `copier.yml` self-destructs during setup, so
+  a generated project is never a template — and their `QUOINAPI_*`
+  service variables were never rewritten either: the substitution key
+  is `QUOIN_`, so `QUOINAPI_ENV` doesn't match it and would have
+  pointed an adopter's gate at a prefix their project never reads. Any
+  adopter whose project wasn't named "QuoinAPI" hit a failing CI gate
+  on day one. The post-gen ruff format also now pins to the version
+  the generated project's own `pyproject.toml` locks instead of
+  whatever `uvx` resolves, and reports a failed format instead of
+  silently claiming success.
 
 ## [0.11.0] - 2026-09-07
 
