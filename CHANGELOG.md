@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-09
+
+Proof, not behaviour: every item here is a CI job, a script, or a
+document, so `copier update` from `0.11.0` is expected to be
+conflict-free end to end. The theme is closing the gap between what
+this repository promises and what it verifies -- two promises were
+checked only by a human running a command from memory, and one was not
+written down at all.
+
 ### Added
 
 - **CI**: a **Scaffold Smoke Test** workflow generates a project from
@@ -813,7 +822,8 @@
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/balakmran/quoin-api/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/balakmran/quoin-api/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/balakmran/quoin-api/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/balakmran/quoin-api/compare/v0.8.0...v0.9.0
