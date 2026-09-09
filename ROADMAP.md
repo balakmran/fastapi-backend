@@ -23,10 +23,9 @@ feedback and shifting priorities.
 The template contract is locked. The pagination envelope, soft delete,
 and the deprecation mechanism shipped in `0.9.0`; the stability and
 semver policy followed in `0.10.0`; `0.11.0` closed the request-path
-correctness work; and `0.12.0` — complete on `main`, awaiting its tag —
-turned the repository's two remaining hand-run promises into CI. A
-generated project is now gated on every pull request, and the
-`copier update` path is gated on every tag.
+correctness work; and `0.12.0` turned the repository's two remaining
+hand-run promises into CI. A generated project is now gated on every
+pull request, and the `copier update` path is gated on every tag.
 
 **`0.10.0` was the last feature release before `1.0`**, and that has not
 changed. What has changed is what the proof found. The 2026-09-08 code
@@ -71,25 +70,6 @@ jobs all failed it. ETag concurrency left the backlog too, but as a
 [guide](docs/guides/optimistic-concurrency.md) rather than a deletion —
 the pattern is worth documenting even though the code isn't worth
 shipping.
-
----
-
-## v0.12.0 — Proof ✅
-
-Complete on `main`. It changes no application behaviour — every item is
-a CI job, a script, or a document — so `copier update` from `0.11.0`
-should be conflict-free end to end. Ship it with `just bump minor`, the
-changelog section, and `just tag`; the tag is also the first the Copier
-Update Check runs with `--check`, closing the loop `0.11.0` opened.
-
-| Status | Item |
-| :----- | :--- |
-| ✅ | **PR-gated scaffold smoke test** — `copier copy --vcs-ref=HEAD` into a temp directory, then the generated project's own `just check`, failing if the gate modifies the tree or a template-maintenance file leaks. Shipped with the fix it was expected to surface: `copier_setup.py` now formats after substitution |
-| ✅ | **Scheduled dependency audit** — weekly `just audit` and `just audit-prod`, filing (or commenting on) a `dependency-audit` issue on findings |
-| ✅ | **`docs/guides/staying-current.md`** — the adopter's side of the stability policy: what `copier update` merges, how to read a **manual reconciliation** note, how to resolve a `.rej` |
-| ✅ | **`just check` after `copier update`** — the Copier Update Check now runs the *updated* project's gate, not only the update |
-| ✅ | **`just tag` publishes the GitHub Release** — every release from `v0.8.0` to `v0.11.0` was published by hand; `--no-release` keeps the old behaviour |
-| ✅ | **Template-maintenance CI no longer ships to adopters** — the smoke and update workflows only ever failed in a generated project |
 
 ---
 
