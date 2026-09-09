@@ -61,6 +61,13 @@
   rows covering `justfile` recipe changes, which the table previously
   addressed only for `just new` scaffold output.
 
+- **Infrastructure**: `mock-oauth2-server` 4.0.0 → 6.0.2. The local
+  mock's token endpoint, its `scope`-into-`aud` injection, and its JWKS
+  document are all unchanged, so `just token` and the roles it encodes
+  behave as before -- verified by validating a minted token through
+  `validate_token` against the running mock. The image is now
+  Wolfi-based and still ships the `wget` the Compose health check calls.
+
 ### Fixed
 
 - **Template**: `copier copy` now produces an already-formatted project.
